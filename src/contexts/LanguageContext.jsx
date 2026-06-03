@@ -14,7 +14,7 @@ const translations = {
     'nav.analytics': 'Analitik',
     
     // Dashboard
-    'dashboard.title': 'Ikhtisar Dasbor',
+    'dashboard.title': 'Dashboard Overview',
     'dashboard.subtitle': 'Gambaran metrik churn dan tren pelanggan',
     'stat.total.customers': 'Total Pelanggan',
     'stat.total.sub': 'Akun aktif',
