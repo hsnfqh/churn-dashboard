@@ -2,19 +2,19 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
 
-// Data terjemahan
+// Data terjemahan - LENGKAP BAHASA INDONESIA
 const translations = {
   id: {
     // Sidebar
     'app.name': 'ChurnAI',
     'app.subtitle': 'Platform Analitik',
-    'nav.dashboard': 'Dasbor',
+    'nav.dashboard': 'Beranda',
     'nav.prediction': 'Prediksi Churn',
     'nav.customers': 'Data Pelanggan',
     'nav.analytics': 'Analitik',
     
     // Dashboard
-    'dashboard.title': 'Dashboard Overview',
+    'dashboard.title': 'Ringkasan Dashboard',
     'dashboard.subtitle': 'Gambaran metrik churn dan tren pelanggan',
     'stat.total.customers': 'Total Pelanggan',
     'stat.total.sub': 'Akun aktif',
@@ -34,7 +34,7 @@ const translations = {
     'at.risk': 'Berisiko',
     'churned': 'Berhenti',
     
-    // Prediction
+    // Prediction Page
     'prediction.title': 'Prediksi Churn',
     'prediction.subtitle': 'Masukkan data pelanggan untuk memprediksi kemungkinan churn',
     'customer.info': 'Informasi Pelanggan',
@@ -44,13 +44,13 @@ const translations = {
     'customer.id': 'ID Pelanggan',
     'age': 'Usia',
     'gender': 'Jenis Kelamin',
-    'tenure': 'Masa Berlangganan (bulan)',
-    'monthly.usage': 'Penggunaan Bulanan (jam)',
+    'tenure': 'Masa Langganan',
+    'monthly.usage': 'Penggunaan Bulanan',
     'transaction.freq': 'Frekuensi Transaksi',
-    'avg.spending': 'Rata-rata Pengeluaran ($)',
-    'satisfaction.score': 'Skor Kepuasan (1-5)',
+    'avg.spending': 'Rata-rata Pengeluaran',
+    'satisfaction.score': 'Skor Kepuasan',
     'complaints': 'Jumlah Keluhan',
-    'service.rating': 'Rating Layanan (1-5)',
+    'service.rating': 'Rating Layanan',
     'payment.method': 'Metode Pembayaran',
     'late.payment': 'Pembayaran Terlambat',
     'subscription.type': 'Jenis Langganan',
@@ -62,7 +62,7 @@ const translations = {
     'medium.risk': 'RISIKO SEDANG',
     'low.risk': 'RISIKO RENDAH',
     'main.cause': 'Penyebab Utama',
-    'recommended.actions': 'Tindakan yang Direkomendasikan',
+    'recommended.actions': 'Rekomendasi Tindakan',
     'risk.breakdown': 'Rincian Risiko',
     'satisfaction': 'Kepuasan',
     'price.sensitivity': 'Sensitivitas Harga',
@@ -70,20 +70,50 @@ const translations = {
     'loyalty.index': 'Indeks Loyalitas',
     
     // Customer Page
-    'customer.management': 'Manajemen Pelanggan',
+    'customer.management': 'Data Pelanggan',
     'customers.found': 'pelanggan ditemukan',
     'search.placeholder': 'Cari berdasarkan ID atau nama...',
     'export': 'Ekspor',
     'showing': 'Menampilkan',
     'of': 'dari',
-    'customer.id.table': 'ID Pelanggan',
+    'customer.id.table': 'ID',
     'name': 'Nama',
+    'age.table': 'Usia',
+    'country': 'Negara',
+    'tenure.table': 'Masa',
     'risk.level': 'Tingkat Risiko',
     'probability.table': 'Probabilitas',
     'main.factor': 'Faktor Utama',
     'recommendation': 'Rekomendasi',
+    'status': 'Status',
+    'active': 'Aktif',
+    'churned.status': 'Berhenti',
     
-    // Analytics
+    // Risk Levels
+    'critical': 'Kritis',
+    'high': 'Tinggi',
+    'medium': 'Sedang',
+    'low': 'Rendah',
+    
+    // Factors
+    'normal.profile': 'Profil normal',
+    'high.return.rate': 'Tingkat pengembalian tinggi',
+    'low.credit.score': 'Skor kredit rendah',
+    'very.low.activity': 'Aktivitas sangat rendah',
+    'low.activity': 'Aktivitas rendah',
+    'low.lifetime.value': 'Nilai seumur hidup rendah',
+    'low.purchase.amount': 'Jumlah pembelian rendah',
+    'multiple.risk.factors': 'Beberapa faktor risiko',
+    'moderate.risk.factors': 'Faktor risiko sedang',
+    
+    // Recommendations
+    'regular.monitoring': 'Pemantauan rutin',
+    'urgent.reengagement': 'Kampanye re-engagement mendesak',
+    'immediate.retention': 'Panggilan retensi segera',
+    'send.personalized.offer': 'Kirim penawaran personal',
+    'monitor.engage': 'Pantau dan libatkan secara rutin',
+    
+    // Analytics Page
     'analytics.title': 'Wawasan Analitik',
     'analytics.subtitle': 'Pola churn dan perilaku pelanggan',
     'feature.importance': 'Pentingnya Fitur',
@@ -97,8 +127,10 @@ const translations = {
     // Topbar
     'search.placeholder.top': 'Cari pelanggan, prediksi...',
     'admin': 'Admin',
+    'settings': 'Pengaturan',
+    'logout': 'Keluar',
     
-    // Settings
+    // Settings Page
     'settings.title': 'Pengaturan',
     'settings.subtitle': 'Konfigurasi preferensi platform ChurnAI Anda',
     'model.config': 'Konfigurasi Model',
@@ -119,7 +151,9 @@ const translations = {
     'light': 'Terang',
     'dark': 'Gelap',
     'indonesian': 'Indonesia',
-    'english': 'English',
+    'english': 'Inggris',
+    'save': 'Simpan',
+    'cancel': 'Batal',
   },
   en: {
     // Sidebar
@@ -151,7 +185,7 @@ const translations = {
     'at.risk': 'At Risk',
     'churned': 'Churned',
     
-    // Prediction
+    // Prediction Page
     'prediction.title': 'Churn Prediction',
     'prediction.subtitle': 'Enter customer data to predict churn probability',
     'customer.info': 'Customer Information',
@@ -161,13 +195,13 @@ const translations = {
     'customer.id': 'Customer ID',
     'age': 'Age',
     'gender': 'Gender',
-    'tenure': 'Tenure (months)',
-    'monthly.usage': 'Monthly Usage (hrs)',
+    'tenure': 'Tenure',
+    'monthly.usage': 'Monthly Usage',
     'transaction.freq': 'Transaction Frequency',
-    'avg.spending': 'Avg Spending ($)',
-    'satisfaction.score': 'Satisfaction Score (1-5)',
+    'avg.spending': 'Avg Spending',
+    'satisfaction.score': 'Satisfaction Score',
     'complaints': 'Number of Complaints',
-    'service.rating': 'Service Rating (1-5)',
+    'service.rating': 'Service Rating',
     'payment.method': 'Payment Method',
     'late.payment': 'Late Payment',
     'subscription.type': 'Subscription Type',
@@ -193,14 +227,44 @@ const translations = {
     'export': 'Export',
     'showing': 'Showing',
     'of': 'of',
-    'customer.id.table': 'Customer ID',
+    'customer.id.table': 'ID',
     'name': 'Name',
+    'age.table': 'Age',
+    'country': 'Country',
+    'tenure.table': 'Tenure',
     'risk.level': 'Risk Level',
     'probability.table': 'Probability',
     'main.factor': 'Main Factor',
     'recommendation': 'Recommendation',
+    'status': 'Status',
+    'active': 'Active',
+    'churned.status': 'Churned',
     
-    // Analytics
+    // Risk Levels
+    'critical': 'Critical',
+    'high': 'High',
+    'medium': 'Medium',
+    'low': 'Low',
+    
+    // Factors
+    'normal.profile': 'Normal profile',
+    'high.return.rate': 'High return rate',
+    'low.credit.score': 'Low credit score',
+    'very.low.activity': 'Very low activity',
+    'low.activity': 'Low activity',
+    'low.lifetime.value': 'Low lifetime value',
+    'low.purchase.amount': 'Low purchase amount',
+    'multiple.risk.factors': 'Multiple risk factors',
+    'moderate.risk.factors': 'Moderate risk factors',
+    
+    // Recommendations
+    'regular.monitoring': 'Regular monitoring',
+    'urgent.reengagement': 'Urgent re-engagement campaign',
+    'immediate.retention': 'Immediate retention call',
+    'send.personalized.offer': 'Send personalized offer',
+    'monitor.engage': 'Monitor & engage regularly',
+    
+    // Analytics Page
     'analytics.title': 'Analytics Insight',
     'analytics.subtitle': 'Deep dive into churn patterns and customer behavior',
     'feature.importance': 'Feature Importance',
@@ -214,8 +278,10 @@ const translations = {
     // Topbar
     'search.placeholder.top': 'Search customers, predictions...',
     'admin': 'Admin',
+    'settings': 'Settings',
+    'logout': 'Logout',
     
-    // Settings
+    // Settings Page
     'settings.title': 'Settings',
     'settings.subtitle': 'Configure your ChurnAI platform preferences',
     'model.config': 'Model Configuration',
@@ -237,6 +303,8 @@ const translations = {
     'dark': 'Dark',
     'indonesian': 'Indonesian',
     'english': 'English',
+    'save': 'Save',
+    'cancel': 'Cancel',
   }
 };
 
