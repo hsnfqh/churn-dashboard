@@ -23,10 +23,31 @@ export default function ChurnDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [formData, setFormData] = useState({
-    customerId: "", age: "", gender: "Male", tenure: "",
-    monthlyUsage: "", transactionFreq: "", avgSpending: "",
-    satisfactionScore: "", complaints: "", serviceRating: "",
-    paymentMethod: "Credit Card", latePayment: "No", subscriptionType: "Basic",
+    Age: 25,
+    Membership_Years: 1,
+    Login_Frequency: 10,
+    Session_Duration_Avg: 30,
+    Pages_Per_Session: 5,
+    Cart_Abandonment_Rate: 0,
+    Wishlist_Items: 0,
+    Total_Purchases: 1,
+    Average_Order_Value: 100,
+    Days_Since_Last_Purchase: 10,
+    Discount_Usage_Rate: 0,
+    Returns_Rate: 0,
+    Email_Open_Rate: 50,
+    Customer_Service_Calls: 0,
+    Product_Reviews_Written: 0,
+    Social_Media_Engagement_Score: 50,
+    Mobile_App_Usage: 50,
+    Payment_Method_Diversity: 1,
+    Lifetime_Value: 1000,
+    Credit_Balance: 0,
+
+    Gender: "male",
+    Country: "usa",
+    City: "new york",
+    Signup_Quarter: "q2"
   });
   const [pageTransition, setPageTransition] = useState(false);
 
@@ -61,28 +82,63 @@ export default function ChurnDashboard() {
   const totalPages = Math.ceil(filteredCustomers.length / rowsPerPage);
   const pagedCustomers = filteredCustomers.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-  const handlePredict = () => {
-    setPredicting(true);
-    setTimeout(() => {
-      const score = formData.satisfactionScore;
-      const complaints = parseInt(formData.complaints) || 0;
-      const tenure = parseInt(formData.tenure) || 0;
-      const late = formData.latePayment === "Yes";
-      let prob = 30;
-      if (score <= 2) prob += 30;
-      else if (score <= 3) prob += 15;
-      if (complaints > 3) prob += 20;
-      if (tenure < 6) prob += 15;
-      if (late) prob += 10;
-      prob = Math.min(95, Math.max(10, prob + Math.round(Math.random() * 10 - 5)));
-      const level = prob >= 70 ? (language === 'id' ? 'RISIKO TINGGI' : 'HIGH RISK') : prob >= 40 ? (language === 'id' ? 'RISIKO SEDANG' : 'MEDIUM RISK') : (language === 'id' ? 'RISIKO RENDAH' : 'LOW RISK');
-      const cause = prob >= 70
-        ? (language === 'id' ? "Kepuasan Pelanggan Rendah & Keluhan Sering" : "Low Customer Satisfaction & Frequent Complaints")
-        : prob >= 40 ? (language === 'id' ? "Penggunaan Sedang & Masalah Harga" : "Moderate Usage & Pricing Concerns")
-        : (language === 'id' ? "Keterlibatan & Perilaku Loyal yang Kuat" : "Strong Engagement & Loyal Behavior");
-      setPredictionResult({ probability: prob, level, cause });
+  const handlePredict = async () => {
+    try {
+      setPredicting(true);
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/predict",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            ...formData,
+
+            Age: Number(formData.Age),
+            Membership_Years: Number(formData.Membership_Years),
+            Login_Frequency: Number(formData.Login_Frequency),
+            Session_Duration_Avg: Number(formData.Session_Duration_Avg),
+            Pages_Per_Session: Number(formData.Pages_Per_Session),
+            Cart_Abandonment_Rate: Number(formData.Cart_Abandonment_Rate),
+            Wishlist_Items: Number(formData.Wishlist_Items),
+            Total_Purchases: Number(formData.Total_Purchases),
+            Average_Order_Value: Number(formData.Average_Order_Value),
+            Days_Since_Last_Purchase: Number(formData.Days_Since_Last_Purchase),
+            Discount_Usage_Rate: Number(formData.Discount_Usage_Rate),
+            Returns_Rate: Number(formData.Returns_Rate),
+            Email_Open_Rate: Number(formData.Email_Open_Rate),
+            Customer_Service_Calls: Number(formData.Customer_Service_Calls),
+            Product_Reviews_Written: Number(formData.Product_Reviews_Written),
+            Social_Media_Engagement_Score: Number(formData.Social_Media_Engagement_Score),
+            Mobile_App_Usage: Number(formData.Mobile_App_Usage),
+            Payment_Method_Diversity: Number(formData.Payment_Method_Diversity),
+            Lifetime_Value: Number(formData.Lifetime_Value),
+            Credit_Balance: Number(formData.Credit_Balance)
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      setPredictionResult({
+        probability: data.probability,
+        level: data.risk_level,
+        cause:
+        data.risk_level === "HIGH RISK"
+          ? "Pelanggan menunjukkan indikasi kuat akan berhenti menggunakan layanan."
+          : data.risk_level === "MEDIUM RISK"
+          ? "Terdapat beberapa faktor yang meningkatkan risiko churn."
+          : "Pelanggan masih tergolong loyal dengan risiko churn rendah."
+      });
+
+    } catch (error) {
+      console.error(error);
+      alert("Prediction failed");
+    } finally {
       setPredicting(false);
-    }, 2000);
+    }
   };
 
   return (
