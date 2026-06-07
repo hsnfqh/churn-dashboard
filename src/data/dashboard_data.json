@@ -1,0 +1,138 @@
+{
+  "summary": {
+    "total_customers": 35714,
+    "high_risk_customers": 8793,
+    "loyal_customers": 26921,
+    "churn_rate_pct": 24.62
+  },
+  "churn_trend": [
+    {
+      "period": "q1",
+      "total": 9000,
+      "churn": 2217,
+      "churn_rate": 24.63
+    },
+    {
+      "period": "q2",
+      "total": 9053,
+      "churn": 2321,
+      "churn_rate": 25.64
+    },
+    {
+      "period": "q3",
+      "total": 9030,
+      "churn": 2207,
+      "churn_rate": 24.44
+    },
+    {
+      "period": "q4",
+      "total": 8631,
+      "churn": 2048,
+      "churn_rate": 23.73
+    }
+  ],
+  "distribution_by_country": [
+    {
+      "label": "usa",
+      "total": 12418,
+      "churn": 3026,
+      "churn_rate": 24.37
+    },
+    {
+      "label": "uk",
+      "total": 5366,
+      "churn": 1321,
+      "churn_rate": 24.62
+    },
+    {
+      "label": "canada",
+      "total": 4332,
+      "churn": 1075,
+      "churn_rate": 24.82
+    },
+    {
+      "label": "germany",
+      "total": 3537,
+      "churn": 873,
+      "churn_rate": 24.68
+    },
+    {
+      "label": "australia",
+      "total": 2904,
+      "churn": 752,
+      "churn_rate": 25.9
+    },
+    {
+      "label": "france",
+      "total": 2829,
+      "churn": 687,
+      "churn_rate": 24.28
+    },
+    {
+      "label": "india",
+      "total": 2515,
+      "churn": 617,
+      "churn_rate": 24.53
+    },
+    {
+      "label": "japan",
+      "total": 1813,
+      "churn": 442,
+      "churn_rate": 24.38
+    }
+  ],
+  "distribution_by_gender": [
+    {
+      "label": "female",
+      "total": 17936,
+      "churn": 4459,
+      "churn_rate": 24.86
+    },
+    {
+      "label": "male",
+      "total": 17117,
+      "churn": 4160,
+      "churn_rate": 24.3
+    },
+    {
+      "label": "other",
+      "total": 661,
+      "churn": 174,
+      "churn_rate": 26.32
+    }
+  ],
+  "top_churn_factors": [
+    {
+      "feature": "Customer_Service_Calls",
+      "importance": 0.1238
+    },
+    {
+      "feature": "Payment_Method_Diversity",
+      "importance": 0.0892
+    },
+    {
+      "feature": "Product_Reviews_Written",
+      "importance": 0.064
+    },
+    {
+      "feature": "Lifetime_Value",
+      "importance": 0.0593
+    },
+    {
+      "feature": "Cart_Abandonment_Rate",
+      "importance": 0.058
+    },
+    {
+      "feature": "Wishlist_Items",
+      "importance": 0.0462
+    },
+    {
+      "feature": "Discount_Usage_Rate",
+      "importance": 0.0431
+    },
+    {
+      "feature": "Age",
+      "importance": 0.0368
+    }
+  ]
+}
