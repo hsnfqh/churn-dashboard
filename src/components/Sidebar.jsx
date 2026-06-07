@@ -2,10 +2,10 @@ import { LayoutDashboard, BarChart2, Users, Cpu, Sun, Moon, Globe } from "lucide
 import { useLanguage } from "../contexts/LanguageContext";
 import { useTheme } from "../contexts/ThemeContext";
 
-export default function Sidebar({ open, active, onNavigate, isMobile }) {
+export default function Sidebar({ active, onNavigate, isMobile }) {
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme, themeColors } = useTheme();
-  
+
   const menuItems = [
     { id: "dashboard", icon: LayoutDashboard, label: t('nav.dashboard') },
     { id: "prediction", icon: Cpu, label: t('nav.prediction') },
@@ -13,137 +13,164 @@ export default function Sidebar({ open, active, onNavigate, isMobile }) {
     { id: "analytics", icon: BarChart2, label: t('nav.analytics') },
   ];
 
+  const hoverBg = theme === "dark" ? "rgba(99, 102, 241, 0.15)" : "rgba(99, 102, 241, 0.08)";
+  const activeBg = theme === "dark" ? "rgba(99, 102, 241, 0.25)" : "rgba(99, 102, 241, 0.12)";
+  const activeTextColor = theme === "dark" ? "#818cf8" : "#4f46e5";
+
   return (
-    <div style={{
-      position: isMobile ? "fixed" : "relative",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: open ? 260 : (isMobile ? 0 : 70),
-      minWidth: open ? 260 : (isMobile ? 0 : 70),
-      background: themeColors.sidebarBg,
-      backdropFilter: "blur(20px)",
-      borderRight: `1px solid ${themeColors.sidebarBorder}`,
-      display: "flex",
-      flexDirection: "column",
-      transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-      overflow: "hidden",
-      zIndex: 50,
-      flexShrink: 0,
-      height: "100vh",
-    }}>
-      <div style={{ 
-        padding: "20px 20px 16px", 
-        borderBottom: `1px solid ${themeColors.sidebarBorder}`,
-        opacity: open ? 1 : 0,
-        transition: "opacity 0.2s ease 0.1s",
+    <>
+      <style>{`
+        .sidebar-item {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .sidebar-item:hover {
+          background-color: ${hoverBg} !important;
+          color: ${activeTextColor} !important;
+          padding-left: 16px !important;
+        }
+        .sidebar-item:hover .sidebar-icon {
+          transform: scale(1.1) rotate(2deg);
+          color: #6366f1 !important;
+        }
+      `}</style>
+
+      <div style={{
+        position: "fixed",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: isMobile ? 0 : 260,
+        background: themeColors.sidebarBg,
+        backdropFilter: "blur(25px)",
+        borderRight: `1px solid ${themeColors.sidebarBorder}`,
+        display: isMobile ? "none" : "flex",
+        flexDirection: "column",
         overflow: "hidden",
-        whiteSpace: "nowrap",
+        zIndex: 50,
+        height: "100vh",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #1d4ed8, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        
+        {/* Header Bagian Atas Tanpa Tombol Toggle */}
+        <div style={{ 
+          padding: "18px 16px", 
+          borderBottom: `1px solid ${themeColors.sidebarBorder}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          overflow: "hidden",
+        }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4f46e5, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(99,102,241,0.25)" }}>
             <Cpu size={18} color="#fff" />
           </div>
-          <div style={{ overflow: "hidden" }}>
-            <div style={{ color: themeColors.text, fontWeight: 700, fontSize: 15, whiteSpace: "nowrap" }}>{t('app.name')}</div>
-            <div style={{ color: themeColors.textMuted, fontSize: 11, whiteSpace: "nowrap" }}>{t('app.subtitle')}</div>
+          <div style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
+            <div style={{ color: themeColors.text, fontWeight: 700, fontSize: 14.5 }}>{t('app.name')}</div>
+            <div style={{ color: themeColors.textMuted, fontSize: 11 }}>{t('app.subtitle')}</div>
           </div>
         </div>
-      </div>
 
-      <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
-        {menuItems.map(item => (
-          <button key={item.id} onClick={() => onNavigate(item.id)} style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: open ? "flex-start" : "center",
-            gap: 12,
-            padding: open ? "10px 12px" : "10px",
-            borderRadius: 10,
-            border: "none",
-            cursor: "pointer",
-            textAlign: "left",
-            whiteSpace: "nowrap",
-            width: "100%",
-            background: active === item.id ? "linear-gradient(135deg, rgba(37,99,235,0.4), rgba(59,130,246,0.2))" : "transparent",
-            color: active === item.id ? "#93c5fd" : themeColors.textSecondary,
-            borderLeft: active === item.id ? "2px solid #3b82f6" : "2px solid transparent",
-            transition: "all 0.2s ease",
-          }}>
-            <item.icon size={18} />
-            {open && (
-              <span style={{ 
-                fontSize: 14, 
-                fontWeight: active === item.id ? 600 : 400,
-                opacity: open ? 1 : 0,
-                transition: "opacity 0.2s ease 0.1s",
-              }}>{item.label}</span>
-            )}
-          </button>
-        ))}
-      </nav>
+        {/* Menu Navigasi */}
+        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {menuItems.map(item => {
+            const isActive = active === item.id;
+            return (
+              <button 
+                key={item.id} 
+                onClick={() => onNavigate(item.id)} 
+                className="sidebar-item"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  gap: 12,
+                  padding: "11px 14px",
+                  borderRadius: 12,
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                  width: "100%",
+                  background: isActive ? activeBg : "transparent",
+                  color: isActive ? activeTextColor : themeColors.textSecondary,
+                  borderLeft: `3px solid ${isActive ? "#6366f1" : "transparent"}`,
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                <item.icon 
+                  size={18} 
+                  className="sidebar-icon" 
+                  style={{ 
+                    transition: "transform 0.2s, color 0.2s",
+                    color: isActive ? "#6366f1" : themeColors.textSecondary 
+                  }} 
+                />
+                <span style={{ fontSize: 13.5 }}>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-      <div style={{ 
-        padding: "12px", 
-        borderTop: `1px solid ${themeColors.sidebarBorder}`,
-        opacity: open ? 1 : 0,
-        transition: "opacity 0.2s ease 0.1s",
-      }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, justifyContent: open ? "stretch" : "center" }}>
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
-            flex: open ? 1 : "none",
-            width: open ? "auto" : 32,
-            padding: open ? "8px" : "6px",
-            borderRadius: 8,
-            border: `1px solid ${themeColors.inputBorder}`,
-            background: themeColors.inputBg,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: open ? 6 : 0,
-            color: themeColors.text,
-          }}>
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            {open && <span style={{ fontSize: 12 }}>{theme === 'dark' ? t('light') : t('dark')}</span>}
-          </button>
-          <button onClick={() => setLanguage(language === 'id' ? 'en' : 'id')} style={{
-            flex: open ? 1 : "none",
-            width: open ? "auto" : 32,
-            padding: open ? "8px" : "6px",
-            borderRadius: 8,
-            border: `1px solid ${themeColors.inputBorder}`,
-            background: themeColors.inputBg,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: open ? 6 : 0,
-            color: themeColors.text,
-          }}>
-            <Globe size={16} />
-            {open && <span style={{ fontSize: 12 }}>{language === 'id' ? 'EN' : 'ID'}</span>}
-          </button>
-        </div>
-        
+        {/* Bagian Bawah: Switcher Bahasa & Tema */}
         <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: open ? "flex-start" : "center",
-          gap: 10, 
-          padding: open ? "8px 12px" : "8px",
-          background: themeColors.badgeBg, 
-          borderRadius: 10,
+          padding: "16px 12px 24px", 
+          borderTop: `1px solid ${themeColors.sidebarBorder}`,
         }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #1d4ed8, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>A</div>
-          {open && (
-            <div style={{ overflow: "hidden", transition: "opacity 0.2s ease 0.1s" }}>
-              <div style={{ color: themeColors.text, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" }}>{t('admin')}</div>
-              <div style={{ color: themeColors.textMuted, fontSize: 11, whiteSpace: "nowrap" }}>admin@churnai.com</div>
-            </div>
-          )}
+          <div style={{ display: "flex", gap: 6, flexDirection: "row", alignItems: "center" }}>
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
+              flex: 1,
+              height: 36,
+              padding: "0 8px",
+              borderRadius: 10,
+              border: `1px solid ${themeColors.sidebarBorder}`,
+              background: themeColors.inputBg,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              color: themeColors.textSecondary,
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#6366f1"}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = themeColors.sidebarBorder}
+            >
+              {theme === 'dark' ? <Sun size={16} color="#f59e0b" /> : <Moon size={16} color="#6366f1" />}
+              <span style={{ fontSize: 12, fontWeight: 500 }}>{theme === 'dark' ? t('light') : t('dark')}</span>
+            </button>
+            
+            <button onClick={() => setLanguage(language === 'id' ? 'en' : 'id')} style={{
+              flex: 1,
+              height: 36,
+              padding: "0 8px",
+              borderRadius: 10,
+              border: `1px solid ${themeColors.sidebarBorder}`,
+              background: themeColors.inputBg,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              color: themeColors.textSecondary,
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#6366f1"}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = themeColors.sidebarBorder}
+            >
+              <Globe size={16} color={theme === "dark" ? "#10b981" : "#059669"} />
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{language === 'id' ? 'EN' : 'ID'}</span>
+            </button>
+          </div>
         </div>
+
       </div>
-    </div>
+      
+      {/* Spacer penyeimbang layout utama */}
+      {!isMobile && (
+        <div style={{
+          width: 260,
+          minWidth: 260,
+          flexShrink: 0,
+        }} />
+      )}
+    </>
   );
 }
