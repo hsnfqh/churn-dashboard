@@ -338,7 +338,7 @@ export default function CustomerPage({
       <GlassCard isMobile={isMobile} themeColors={themeColors}>
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.textMuted }} />
+            <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.text}} />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -400,7 +400,7 @@ export default function CustomerPage({
             <tbody className="dash-enter-clean">
               {paginatedCustomers.map((c, i) => (
                 <tr key={c.id} className="clean-row" style={{ borderBottom: `1px solid ${themeColors.sidebarBorder}`, background: i % 2 === 0 ? "transparent" : (isLightMode ? "#f8fafc" : "rgba(255,255,255,0.01)") }}>
-                  <td style={{ padding: "12px 14px", color: themeColors.textMuted }}>{c.id}</td>
+                  <td style={{ padding: "12px 14px", color: themeColors.text }}>{c.id}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.text, fontWeight: 500 }}>{c.name}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.textSecondary }}>{c.age}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.textSecondary }}>{c.country}</td>

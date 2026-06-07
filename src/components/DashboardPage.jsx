@@ -71,7 +71,7 @@ function KpiCard({ icon: Icon, label, sub, value, color, decimals = 0, suffix = 
         <div style={{ fontSize: 12.5, color: themeColors.textSecondary, fontWeight: 600, letterSpacing: "0.2px" }}>{label}</div>
       </div>
       <div style={{ fontSize: isMobile ? 26 : 32, fontWeight: 800, color: themeColors.text, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums", lineHeight: 1, marginBottom: 6, position: "relative" }}>{text}{suffix}</div>
-      <div style={{ fontSize: 12, color: themeColors.textMuted, position: "relative", zIndex: 1 }}>{sub}</div>
+      <div style={{ fontSize: 12, color: themeColors.text, position: "relative", zIndex: 1 }}>{sub}</div>
     </div>
   );
 }
@@ -393,7 +393,7 @@ export default function DashboardPage({ isMobile, themeColors }) {
   const panelTitle = (title, sub) => (
     <div style={{ marginBottom: 16 }}>
       <h3 style={{ color: themeColors.text, margin: 0, fontSize: isMobile ? 13 : 15, fontWeight: 600 }}>{title}</h3>
-      <p style={{ color: themeColors.textMuted, margin: "2px 0 0", fontSize: 11 }}>{sub}</p>
+      <p style={{ color: themeColors.text, margin: "2px 0 0", fontSize: 11 }}>{sub}</p>
     </div>
   );
 
@@ -457,7 +457,7 @@ export default function DashboardPage({ isMobile, themeColors }) {
       <div className="dash-enter-3d" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 22, animationDelay: "0ms" }}>
         <div>
           <h2 style={{ color: themeColors.text, fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>{t("dashboard.title")}</h2>
-          <p style={{ color: themeColors.textMuted, fontSize: 12.5, margin: "5px 0 0" }}>{t("dashboard.subtitle")}</p>
+          <p style={{ color: themeColors.text, fontSize: 12.5, margin: "5px 0 0" }}>{t("dashboard.subtitle")}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderRadius: 99, background: themeColors.cardBg, border: `1px solid ${themeColors.cardBorder}`, backdropFilter: "blur(20px)", boxShadow: "0 6px 16px rgba(0,0,0,0.04)" }}>
           <span className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
@@ -532,7 +532,7 @@ export default function DashboardPage({ isMobile, themeColors }) {
                     <span style={{ color: themeColors.textSecondary, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
                   </div>
                   <span style={{ color: themeColors.text, fontWeight: 600, fontSize: 12.5, flexShrink: 0 }}>
-                    {distTotal > 0 ? Math.round((d.value / distTotal) * 100) : 0}% <span style={{ color: themeColors.textMuted, fontWeight: 400 }}>&middot; {fmt(d.value)}</span>
+                    {distTotal > 0 ? Math.round((d.value / distTotal) * 100) : 0}% <span style={{ color: themeColors.text, fontWeight: 400 }}>&middot; {fmt(d.value)}</span>
                   </span>
                 </div>
               ))}

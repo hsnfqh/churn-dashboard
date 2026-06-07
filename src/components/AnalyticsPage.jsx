@@ -263,25 +263,25 @@ export default function AnalyticsPage({ isMobile, themeColors }) {
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#3b82f6" }}>{analyticsData?.totalCustomers?.toLocaleString() || 0}</div>
-            <div style={{ fontSize: 11, color: themeColors.textMuted }}>Total Pelanggan</div>
+            <div style={{ fontSize: 11, color: themeColors.text }}>Total Pelanggan</div>
           </div>
         </GlassCard>
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#ef4444" }}>{analyticsData?.highRiskCount?.toLocaleString() || 0}</div>
-            <div style={{ fontSize: 11, color: themeColors.textMuted }}>Risiko Tinggi</div>
+            <div style={{ fontSize: 11, color: themeColors.text }}>Risiko Tinggi</div>
           </div>
         </GlassCard>
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#10b981" }}>{analyticsData?.lowRiskCount?.toLocaleString() || 0}</div>
-            <div style={{ fontSize: 11, color: themeColors.textMuted }}>Risiko Rendah</div>
+            <div style={{ fontSize: 11, color: themeColors.text }}>Risiko Rendah</div>
           </div>
         </GlassCard>
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#f59e0b" }}>{analyticsData?.avgChurnRate?.toFixed(1) || 0}%</div>
-            <div style={{ fontSize: 11, color: themeColors.textMuted }}>Rata-rata Churn</div>
+            <div style={{ fontSize: 11, color: themeColors.text}}>Rata-rata Churn</div>
           </div>
         </GlassCard>
       </div>
@@ -328,8 +328,8 @@ export default function AnalyticsPage({ isMobile, themeColors }) {
                   <span style={{ fontWeight: 700, color: s.color }}>{s.percentage.toFixed(1)}%</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span style={{ color: themeColors.textMuted }}>{s.value.toLocaleString()} pelanggan</span>
-                  <span style={{ color: themeColors.textMuted }}>Est. Churn: {s.avgChurn}%</span>
+                  <span style={{ color: themeColors.text }}>{s.value.toLocaleString()} pelanggan</span>
+                  <span style={{ color: themeColors.text}}>Est. Churn: {s.avgChurn}%</span>
                 </div>
                 <div style={{ height: 4, background: `${themeColors.textMuted}20`, borderRadius: 2, marginTop: 8 }}>
                   <div style={{ width: `${s.percentage}%`, height: 4, background: s.color, borderRadius: 2 }} />
@@ -397,7 +397,7 @@ export default function AnalyticsPage({ isMobile, themeColors }) {
                   <span style={{ fontSize: 10, background: `${feature.color}20`, padding: "2px 6px", borderRadius: 10, color: feature.color }}>{feature.importance}%</span>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: feature.color }}>
-                  {factor?.value || 0} <span style={{ fontSize: 12, color: themeColors.textMuted }}>{factor?.unit || ""}</span>
+                  {factor?.value || 0} <span style={{ fontSize: 12, color: themeColors.text}}>{factor?.unit || ""}</span>
                 </div>
                 <div style={{ height: 4, background: `${themeColors.textMuted}20`, borderRadius: 2, marginTop: 8 }}>
                   <div style={{ width: `${Math.min((factor?.value || 0) / (factor?.maxValue || 100) * 100, 100)}%`, height: 4, background: feature.color, borderRadius: 2 }} />
