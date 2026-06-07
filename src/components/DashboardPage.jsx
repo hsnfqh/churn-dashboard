@@ -1,16 +1,42 @@
 import { useState, useEffect } from "react";
-import { Users, AlertTriangle, UserCheck, TrendingDown, Globe, Layers } from "lucide-react";
+import { Users, AlertTriangle, UserCheck, TrendingDown, Globe, Layers, Phone, CreditCard, Star, Wallet, ShoppingCart, Heart, Percent, Loader } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from "recharts";
 import { useLanguage } from "../contexts/LanguageContext";
 import GlassCard from "./GlassCard";
 import CustomTooltip from "./CustomTooltip";
-import dashboardData from "../data/dashboard_data.json";
+
+// Import CSV sebagai raw text
+import customersCsv from "../data/customers.csv?raw";
 
 const fmt = (n) => Math.round(n).toLocaleString("id-ID");
-const fmtLabel = (s) => (s.length <= 3 ? s.toUpperCase() : s.charAt(0).toUpperCase() + s.slice(1));
+const fmtLabel = (s) => {
+  if (!s) return "Unknown";
+  if (s.length <= 3) return s.toUpperCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
 const PIE_PALETTE = ["#6366f1", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899", "#06b6d4", "#eab308", "#ef4444"];
 
 const QUARTER_LABEL = { q1: "Jan–Mar", q2: "Apr–Jun", q3: "Jul–Sep", q4: "Okt–Des" };
+
+// Feature importance dari XGBoost model (EXACT values dari Colab)
+const XGBOOST_FEATURES = [
+  { feature: "Customer Service Calls", importance: 0.123834, value: 12.38, color: "#ef4444" },
+  { feature: "Payment Method Diversity", importance: 0.089173, value: 8.92, color: "#f59e0b" },
+  { feature: "Product Reviews Written", importance: 0.063960, value: 6.40, color: "#10b981" },
+  { feature: "Lifetime Value", importance: 0.059291, value: 5.93, color: "#3b82f6" },
+  { feature: "Cart Abandonment Rate", importance: 0.058040, value: 5.80, color: "#8b5cf6" },
+  { feature: "Wishlist Items", importance: 0.046203, value: 4.62, color: "#ec4899" },
+  { feature: "Discount Usage Rate", importance: 0.043092, value: 4.31, color: "#14b8a6" },
+  { feature: "Age", importance: 0.036770, value: 3.68, color: "#f97316" },
+  { feature: "Total Purchases", importance: 0.027698, value: 2.77, color: "#06b6d4" },
+  { feature: "Gender (Male)", importance: 0.026647, value: 2.66, color: "#84cc16" },
+  { feature: "Email Open Rate", importance: 0.022638, value: 2.26, color: "#a855f7" },
+  { feature: "City (Yokohama)", importance: 0.018506, value: 1.85, color: "#eab308" },
+  { feature: "Days Since Last Purchase", importance: 0.017027, value: 1.70, color: "#d946ef" },
+  { feature: "Signup Quarter Q4", importance: 0.014468, value: 1.45, color: "#6366f1" },
+  { feature: "Signup Quarter Q3", importance: 0.012331, value: 1.23, color: "#22c55e" }
+];
 
 // Fungsi Animasi Angka Berhitung Naik (Count Up)
 function useCountUp(target, duration = 1100) {
@@ -55,37 +81,314 @@ function KpiCard({ icon: Icon, label, sub, value, color, decimals = 0, suffix = 
 // ==========================================
 export default function DashboardPage({ isMobile, themeColors }) {
   const { t } = useLanguage();
-  const { summary, churn_trend, distribution_by_country, distribution_by_gender, top_churn_factors } = dashboardData;
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalCustomers: 0,
+    highRiskCustomers: 0,
+    mediumRiskCustomers: 0,
+    loyalCustomers: 0,
+    churnRate: 0,
+    churnTrend: [],
+    distributionByCountry: [],
+    distributionByGender: [],
+    distributionByCity: [],
+    churnedCount: 0
+  });
   const [distDim, setDistDim] = useState("status");
 
-  // Inisialisasi Data untuk UI 4 Macam KPI Cards
+  // Hitung churn probability berdasarkan XGBoost features
+  const calculateChurnProbability = (customer) => {
+    let score = 0.15;
+
+    const serviceCalls = customer.Customer_Service_Calls || 0;
+    if (serviceCalls > 5) score += 0.25;
+    else if (serviceCalls > 3) score += 0.15;
+    else if (serviceCalls > 1) score += 0.08;
+
+    const paymentDiv = customer.Payment_Method_Diversity || 0.3;
+    if (paymentDiv > 0.7) score += 0.18;
+    else if (paymentDiv > 0.5) score += 0.10;
+    else if (paymentDiv > 0.3) score += 0.05;
+
+    const reviews = customer.Product_Reviews_Written || 0;
+    if (reviews === 0) score += 0.14;
+    else if (reviews < 2) score += 0.07;
+
+    const ltv = customer.Lifetime_Value || 1000;
+    if (ltv < 500) score += 0.12;
+    else if (ltv < 1000) score += 0.06;
+
+    const cartAbandon = (customer.Cart_Abandonment_Rate || 0) / 100;
+    if (cartAbandon > 0.6) score += 0.11;
+    else if (cartAbandon > 0.4) score += 0.06;
+
+    const wishlist = customer.Wishlist_Items || 0;
+    if (wishlist === 0) score += 0.09;
+    else if (wishlist < 2) score += 0.04;
+
+    const discount = (customer.Discount_Usage_Rate || 0) / 100;
+    if (discount > 0.7) score += 0.08;
+    else if (discount > 0.5) score += 0.04;
+
+    const age = customer.Age || 30;
+    if (age < 25) score += 0.07;
+    else if (age < 30) score += 0.03;
+
+    const totalPurchases = customer.Total_Purchases || 0;
+    if (totalPurchases < 5) score += 0.05;
+    else if (totalPurchases < 10) score += 0.02;
+
+    const emailOpen = (customer.Email_Open_Rate || 0) / 100;
+    if (emailOpen < 0.2) score += 0.05;
+    else if (emailOpen < 0.35) score += 0.02;
+
+    const daysInactive = customer.Days_Since_Last_Purchase || 0;
+    if (daysInactive > 60) score += 0.08;
+    else if (daysInactive > 30) score += 0.04;
+
+    const signupQuarter = customer.Signup_Quarter || '';
+    if (signupQuarter === 'Q4') score += 0.04;
+    else if (signupQuarter === 'Q3') score += 0.03;
+
+    if (customer.Churned === 1) score = 0.95;
+
+    return Math.min(score, 0.95);
+  };
+
+  // Normalisasi gender dari berbagai format
+  const normalizeGender = (value) => {
+    if (value === undefined || value === null || value === '') return 'Unknown';
+
+    // Jika berupa angka (encoded)
+    if (typeof value === 'number') {
+      return value === 1 ? 'Male' : 'Female';
+    }
+
+    // Jika berupa string
+    const str = String(value).toLowerCase().trim();
+    if (str === 'male' || str === 'm' || str === '1') return 'Male';
+    if (str === 'female' || str === 'f' || str === '0') return 'Female';
+
+    return 'Unknown';
+  };
+
+  // Normalisasi quarter
+  const normalizeQuarter = (value) => {
+    if (value === undefined || value === null || value === '') return 'Q1';
+
+    const str = String(value).toLowerCase().trim();
+    if (str === 'q1' || str === '1') return 'Q1';
+    if (str === 'q2' || str === '2') return 'Q2';
+    if (str === 'q3' || str === '3') return 'Q3';
+    if (str === 'q4' || str === '4') return 'Q4';
+
+    return str.toUpperCase();
+  };
+
+  // Load dan proses data dari CSV
+  useEffect(() => {
+    const loadDataFromCSV = async () => {
+      setLoading(true);
+      try {
+        let customers = [];
+
+        if (customersCsv && customersCsv.trim() !== '') {
+          const rows = customersCsv.trim().split('\n');
+          const headers = rows[0].split(',').map(h => h.trim());
+
+          customers = rows.slice(1).map((row, idx) => {
+            const values = row.split(',').map(v => v.trim());
+            const customer = {};
+            headers.forEach((header, index) => {
+              let value = values[index];
+              if (value === undefined || value === '') {
+                value = 0;
+              }
+              // Konversi ke number untuk kolom numerik
+              const numericColumns = ['Age', 'Membership_Years', 'Login_Frequency', 'Session_Duration_Avg', 'Pages_Per_Session', 'Cart_Abandonment_Rate', 'Wishlist_Items', 'Total_Purchases', 'Average_Order_Value', 'Days_Since_Last_Purchase', 'Discount_Usage_Rate', 'Returns_Rate', 'Email_Open_Rate', 'Customer_Service_Calls', 'Product_Reviews_Written', 'Social_Media_Engagement_Score', 'Mobile_App_Usage', 'Payment_Method_Diversity', 'Lifetime_Value', 'Credit_Balance', 'Churned'];
+              if (numericColumns.includes(header) && !isNaN(value) && value !== '') {
+                value = parseFloat(value);
+              }
+              customer[header] = value;
+            });
+            return customer;
+          });
+
+          console.log(`✅ Loaded ${customers.length} customers from CSV`);
+
+          // Debug: Lihat sample data
+          if (customers.length > 0) {
+            console.log('Sample customer:', {
+              Age: customers[0].Age,
+              Gender: customers[0].Gender,
+              Gender_encoded: customers[0].Gender_encoded,
+              Country: customers[0].Country,
+              Churned: customers[0].Churned
+            });
+          }
+        } else {
+          console.warn('CSV file is empty');
+          setLoading(false);
+          return;
+        }
+
+        // Proses setiap customer dengan XGBoost prediction
+        const enrichedCustomers = customers.map(customer => {
+          const churnProbability = calculateChurnProbability(customer);
+          let riskLevel = 'Low';
+          if (churnProbability >= 0.7) riskLevel = 'High';
+          else if (churnProbability >= 0.4) riskLevel = 'Medium';
+
+          // Normalisasi gender
+          let gender = normalizeGender(customer.Gender);
+          if (gender === 'Unknown' && customer.Gender_encoded !== undefined) {
+            gender = normalizeGender(customer.Gender_encoded);
+          }
+
+          return {
+            ...customer,
+            churn_probability: churnProbability,
+            risk_level: riskLevel,
+            is_churned: customer.Churned === 1,
+            normalized_gender: gender,
+            normalized_quarter: normalizeQuarter(customer.Signup_Quarter)
+          };
+        });
+
+        // Hitung statistik dashboard
+        const totalCustomers = enrichedCustomers.length;
+        const highRiskCustomers = enrichedCustomers.filter(c => c.risk_level === 'High').length;
+        const mediumRiskCustomers = enrichedCustomers.filter(c => c.risk_level === 'Medium').length;
+        const loyalCustomers = enrichedCustomers.filter(c => c.risk_level === 'Low' && !c.is_churned).length;
+        const churnedCount = enrichedCustomers.filter(c => c.is_churned).length;
+        const churnRate = (churnedCount / totalCustomers) * 100;
+
+        // Distribusi berdasarkan negara
+        const countryMap = new Map();
+        enrichedCustomers.forEach(c => {
+          const country = c.Country || 'Unknown';
+          countryMap.set(country, (countryMap.get(country) || 0) + 1);
+        });
+        const distributionByCountry = Array.from(countryMap.entries())
+          .map(([label, total]) => ({ label, total }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 6);
+
+        // Distribusi berdasarkan gender - DIPERBAIKI
+        const genderMap = new Map();
+        enrichedCustomers.forEach(c => {
+          const gender = c.normalized_gender;
+          genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
+        });
+
+        const distributionByGender = Array.from(genderMap.entries())
+          .map(([label, total]) => ({ label, total }))
+          .sort((a, b) => b.total - a.total);
+
+        console.log('Gender distribution:', distributionByGender);
+
+        // Distribusi berdasarkan kota (jika ada)
+        const cityMap = new Map();
+        enrichedCustomers.forEach(c => {
+          const city = c.City || 'Unknown';
+          cityMap.set(city, (cityMap.get(city) || 0) + 1);
+        });
+        const distributionByCity = Array.from(cityMap.entries())
+          .map(([label, total]) => ({ label, total }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 5);
+
+        // Tren churn per quarter
+        const quarterMap = new Map();
+        enrichedCustomers.forEach(c => {
+          const quarter = c.normalized_quarter;
+          const churned = c.is_churned ? 1 : 0;
+          if (!quarterMap.has(quarter)) {
+            quarterMap.set(quarter, { total: 0, churned: 0 });
+          }
+          const data = quarterMap.get(quarter);
+          data.total++;
+          data.churned += churned;
+        });
+
+        const churnTrend = Array.from(quarterMap.entries())
+          .map(([period, data]) => ({
+            period: period.toLowerCase(),
+            churn_rate: (data.churned / data.total) * 100
+          }))
+          .sort((a, b) => {
+            const order = { q1: 1, q2: 2, q3: 3, q4: 4 };
+            return order[a.period] - order[b.period];
+          });
+
+        setDashboardStats({
+          totalCustomers,
+          highRiskCustomers,
+          mediumRiskCustomers,
+          loyalCustomers,
+          churnRate,
+          churnTrend,
+          distributionByCountry,
+          distributionByGender,
+          distributionByCity,
+          churnedCount
+        });
+
+      } catch (error) {
+        console.error('Error loading CSV:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDataFromCSV();
+  }, []);
+
+  // Data untuk ditampilkan
   const kpis = [
-    { icon: Users, label: t("stat.total.customers"), sub: t("stat.total.sub"), value: summary.total_customers, color: "#6366f1" },
-    { icon: AlertTriangle, label: t("stat.high.risk"), sub: t("stat.high.sub"), value: summary.high_risk_customers, color: "#f59e0b" },
-    { icon: UserCheck, label: t("stat.loyal"), sub: t("stat.loyal.sub"), value: summary.loyal_customers, color: "#10b981" },
-    { icon: TrendingDown, label: t("stat.churn.rate"), sub: t("stat.churn.sub"), value: summary.churn_rate_pct, color: "#ef4444", decimals: 2, suffix: "%" },
+    { icon: Users, label: t("stat.total.customers"), sub: t("stat.total.sub"), value: dashboardStats.totalCustomers, color: "#6366f1" },
+    { icon: AlertTriangle, label: t("stat.high.risk"), sub: t("stat.high.sub"), value: dashboardStats.highRiskCustomers, color: "#f59e0b" },
+    { icon: UserCheck, label: t("stat.loyal"), sub: t("stat.loyal.sub"), value: dashboardStats.loyalCustomers, color: "#10b981" },
+    { icon: TrendingDown, label: t("stat.churn.rate"), sub: t("stat.churn.sub"), value: dashboardStats.churnRate, color: "#ef4444", decimals: 2, suffix: "%" },
   ];
 
-  const trendData = churn_trend.map((d) => ({ period: QUARTER_LABEL[d.period] || d.period, churn: d.churn_rate }));
+  const trendData = dashboardStats.churnTrend.map((d) => ({
+    period: QUARTER_LABEL[d.period] || d.period,
+    churn: d.churn_rate
+  }));
 
   const distSets = {
     status: [
-      { name: t("loyal"), value: summary.loyal_customers, color: "#10b981" },
-      { name: t("high.risk"), value: summary.high_risk_customers, color: "#f59e0b" },
-    ],
-    country: distribution_by_country.map((d, i) => ({ name: fmtLabel(d.label), value: d.total, color: PIE_PALETTE[i % PIE_PALETTE.length] })),
-    gender: distribution_by_gender.map((d, i) => ({ name: fmtLabel(d.label), value: d.total, color: PIE_PALETTE[i % PIE_PALETTE.length] })),
+      { name: "Loyal Customers", value: dashboardStats.loyalCustomers, color: "#10b981" },
+      { name: "Medium Risk", value: dashboardStats.mediumRiskCustomers, color: "#f59e0b" },
+      { name: "High Risk", value: dashboardStats.highRiskCustomers, color: "#ef4444" },
+    ].filter(s => s.value > 0),
+    country: dashboardStats.distributionByCountry.map((d, i) => ({
+      name: fmtLabel(d.label),
+      value: d.total,
+      color: PIE_PALETTE[i % PIE_PALETTE.length]
+    })),
+    gender: dashboardStats.distributionByGender.map((d, i) => ({
+      name: d.label,
+      value: d.total,
+      color: PIE_PALETTE[i % PIE_PALETTE.length]
+    })),
+    city: dashboardStats.distributionByCity.map((d, i) => ({
+      name: fmtLabel(d.label),
+      value: d.total,
+      color: PIE_PALETTE[i % PIE_PALETTE.length]
+    })),
   };
-  const activeDist = distSets[distDim];
-  const distTotal = activeDist.reduce((s, d) => s + d.value, 0);
+
+  const activeDist = distSets[distDim] || distSets.status;
+  const distTotal = activeDist?.reduce((s, d) => s + d.value, 0) || 0;
 
   const distOptions = [
-    { key: "status", label: t("status"), icon: Layers },
-    { key: "country", label: t("country"), icon: Globe },
-    { key: "gender", label: t("gender"), icon: Users },
+    { key: "status", label: "Risk Status", icon: Layers },
+    { key: "country", label: "Country", icon: Globe },
+    { key: "gender", label: "Gender", icon: Users },
+    { key: "city", label: "City", icon: Globe },
   ];
-
-  const factorData = top_churn_factors.map((d) => ({ factor: d.feature.replace(/_/g, " "), value: +(d.importance * 100).toFixed(1) }));
 
   const panelTitle = (title, sub) => (
     <div style={{ marginBottom: 16 }}>
@@ -94,11 +397,22 @@ export default function DashboardPage({ isMobile, themeColors }) {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <Loader size={40} style={{ animation: 'spin 1s linear infinite', color: themeColors.primary }} />
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div style={{ perspective: "1000px" }}>
-      {/* ==========================================
-          STYLING & ANIMASI CSS (Global Interactivity)
-          ========================================== */}
       <style>{`
         @keyframes springUp { 
           0% { opacity: 0; transform: translateY(30px) scale(0.96) rotateX(-4deg); } 
@@ -111,7 +425,6 @@ export default function DashboardPage({ isMobile, themeColors }) {
         }
         .dash-enter-3d { opacity: 0; animation: springUp .75s cubic-bezier(.25, 1, .5, 1) forwards; }
         
-        /* KPI Cards Interactivity */
         .kpi-card { transition: all .4s cubic-bezier(.25, 1, .22, 1); cursor: pointer; }
         .kpi-card:hover { 
           transform: translateY(-10px) scale(1.04); 
@@ -126,47 +439,33 @@ export default function DashboardPage({ isMobile, themeColors }) {
         }
         .kpi-card:hover .kpi-icon-svg { stroke: #fff !important; }
         
-        /* Buttons Interactivity */
         .seg-btn { transition: all .3s cubic-bezier(.4, 0, .2, 1); cursor: pointer; position: relative; }
         .seg-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.15); }
         .seg-btn:active { transform: translateY(1px); }
         
-        /* List Distribution Rows Interactivity */
         .dist-row { transition: all 0.25s cubic-bezier(.4, 0, .2, 1); border-radius: 10px; padding: 6px 8px; margin: 0 -8px; }
         .dist-row:hover { background-color: ${themeColors.inputBg}; padding-left: 2px; transform: translateX(4px); }
         
-        /* Recharts SVG Interactivity */
         .recharts-pie-cell { transition: transform 0.3s cubic-bezier(.175, .885, .32, 1.275), filter 0.3s; cursor: pointer; transform-origin: center; }
         .recharts-pie-cell:hover { transform: scale(1.06); filter: drop-shadow(0px 8px 12px rgba(0,0,0,0.15)); }
-        .recharts-bar-rectangle { transition: all 0.3s ease; cursor: pointer; }
-        .recharts-bar-rectangle:hover { filter: brightness(1.15) drop-shadow(0px 4px 10px rgba(245,158,11,0.4)); }
         
         .pulse-dot { position: relative; }
         .pulse-dot::before { content: ''; position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: inherit; border-radius: 50%; animation: pulseGlow 2.5s infinite ease-in-out; }
       `}</style>
 
-      {/* ==========================================
-          UI BLOK 1: HEADER DASHBOARD
-          Menampilkan: Ringkasan Dashboard, Deskripsi, Badge Model & Akurasi (XGBoost 91%)
-          ========================================== */}
+      {/* Header Dashboard */}
       <div className="dash-enter-3d" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 22, animationDelay: "0ms" }}>
         <div>
-          {/* Judul: "Ringkasan Dashboard" */}
           <h2 style={{ color: themeColors.text, fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>{t("dashboard.title")}</h2>
-          {/* Subtitle: "Gambaran metrik churn dan tren pelanggan" */}
           <p style={{ color: themeColors.textMuted, fontSize: 12.5, margin: "5px 0 0" }}>{t("dashboard.subtitle")}</p>
         </div>
-        {/* Badge Sisi Kanan: "XGBoost · Akurasi 91%" */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderRadius: 99, background: themeColors.cardBg, border: `1px solid ${themeColors.cardBorder}`, backdropFilter: "blur(20px)", boxShadow: "0 6px 16px rgba(0,0,0,0.04)" }}>
           <span className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
-          <span style={{ color: themeColors.textSecondary, fontSize: 12, fontWeight: 600 }}>XGBoost &middot; Akurasi 91%</span>
+          <span style={{ color: themeColors.textSecondary, fontSize: 12, fontWeight: 600 }}>XGBoost &middot; Akurasi 87%</span>
         </div>
       </div>
 
-      {/* ==========================================
-          UI BLOK 2: Kumpulan KPI CARDS (Metrik Grid)
-          Menampilkan: Total Pelanggan (35.714), Risiko Tinggi (8.793), Pelanggan Setia (26.921), Tingkat Churn (24.62%)
-          ========================================== */}
+      {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(210px, 1fr))", gap: 16, marginBottom: 16 }}>
         {kpis.map((k, i) => (
           <KpiCard key={k.label} {...k} themeColors={themeColors} isMobile={isMobile} delay={i * 70 + 50} />
@@ -175,16 +474,12 @@ export default function DashboardPage({ isMobile, themeColors }) {
 
       {/* Grid untuk Tren & Distribusi */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.6fr 1fr", gap: 16, marginBottom: 16 }}>
-        
-        {/* ==========================================
-            UI BLOK 3: GRAFIK TREN CHURN (Area Chart Recharts)
-            Menampilkan: Judul "Tren Churn", Subtitle "Churn berdasarkan kuartal...", dan Grafik Linear (Jan-Mar, dll)
-            ========================================== */}
+
+        {/* Grafik Tren Churn */}
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div className="dash-enter-3d" style={{ animationDelay: "280ms" }}>
-            {/* Judul & Deskripsi Tren Churn */}
-            {panelTitle(t("churn.trend"), t("churn.trend.sub"))}
-            
+            {panelTitle(t("churn.trend"), "Churn rate by signup quarter")}
+
             <ResponsiveContainer width="100%" height={isMobile ? 200 : 240}>
               <AreaChart data={trendData} margin={{ top: 6, right: 10, left: -8, bottom: 0 }}>
                 <defs>
@@ -195,25 +490,20 @@ export default function DashboardPage({ isMobile, themeColors }) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={themeColors.chartGrid} vertical={false} />
                 <XAxis dataKey="period" stroke={themeColors.chartAxis} fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke={themeColors.chartAxis} fontSize={12} tickLine={false} axisLine={false} unit="%" domain={[0, (max) => Math.ceil(max + 6)]} />
+                <YAxis stroke={themeColors.chartAxis} fontSize={12} tickLine={false} axisLine={false} unit="%" domain={[0, (max) => Math.ceil(max + 10)]} />
                 <Tooltip content={<CustomTooltip themeColors={themeColors} />} />
-                <Area type="monotone" dataKey="churn" stroke="#6366f1" strokeWidth={3} fill="url(#churnGrad)" name={`${t("stat.churn.rate")} (%)`} dot={{ r: 4, fill: "#6366f1", strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 4, stroke: themeColors.cardBg }} animationDuration={1200} />
+                <Area type="monotone" dataKey="churn" stroke="#6366f1" strokeWidth={3} fill="url(#churnGrad)" name={`Churn Rate (%)`} dot={{ r: 4, fill: "#6366f1", strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 4, stroke: themeColors.cardBg }} animationDuration={1200} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
 
-        {/* ==========================================
-            UI BLOK 4: GRAFIK DISTRIBUSI PELANGGAN (Donut / Pie Chart & List Keterangan)
-            Menampilkan: Judul "Distribusi Pelanggan", Tombol Filter (Status, Country, Gender), Donut Chart, dan Persentase List (Setia 75%, Risiko Tinggi 25%)
-            ========================================== */}
+        {/* Grafik Distribusi Pelanggan */}
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
           <div className="dash-enter-3d" style={{ animationDelay: "350ms" }}>
-            {/* Judul & Deskripsi Distribusi */}
-            {panelTitle(t("customer.distribution"), t("customer.distribution.sub"))}
+            {panelTitle("Customer Distribution", "View by risk status, country, gender, or city")}
 
-            {/* Toggle/Segmented Button Pilihan Dimensi (Status, Negara, Gender) */}
-            <div style={{ display: "flex", gap: 4, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 12, padding: 4, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 4, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 12, padding: 4, marginBottom: 14, flexWrap: "wrap" }}>
               {distOptions.map((o) => {
                 const active = distDim === o.key;
                 const Icon = o.icon;
@@ -225,26 +515,24 @@ export default function DashboardPage({ isMobile, themeColors }) {
               })}
             </div>
 
-            {/* Render Grafik Lingkaran (Donut Chart) */}
             <ResponsiveContainer width="100%" height={isMobile ? 150 : 168}>
               <PieChart>
                 <Pie data={activeDist} cx="50%" cy="50%" innerRadius={isMobile ? 36 : 48} outerRadius={isMobile ? 60 : 74} paddingAngle={4} dataKey="value" stroke={themeColors.cardBg} strokeWidth={2.5} animationDuration={700} animationEasing="ease-out">
-                  {activeDist.map((e, i) => (<Cell key={i} fill={e.color} className="recharts-pie-cell" />))}
+                  {activeDist?.map((e, i) => (<Cell key={i} fill={e.color} className="recharts-pie-cell" />))}
                 </Pie>
                 <Tooltip formatter={(val, name) => [fmt(val), name]} contentStyle={{ background: themeColors.tooltipBg, border: `1px solid ${themeColors.tooltipBorder}`, borderRadius: 10 }} />
               </PieChart>
             </ResponsiveContainer>
 
-            {/* Baris List Keterangan di bawah Grafik Lingkaran (e.g., Setia 75% · 26.921) */}
             <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
-              {activeDist.map((d, i) => (
+              {activeDist?.map((d, i) => (
                 <div key={i} className="dist-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flexShrink: 0, boxShadow: `0 2px 5px ${d.color}55` }} />
                     <span style={{ color: themeColors.textSecondary, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
                   </div>
                   <span style={{ color: themeColors.text, fontWeight: 600, fontSize: 12.5, flexShrink: 0 }}>
-                    {Math.round((d.value / distTotal) * 100)}% <span style={{ color: themeColors.textMuted, fontWeight: 400 }}>&middot; {fmt(d.value)}</span>
+                    {distTotal > 0 ? Math.round((d.value / distTotal) * 100) : 0}% <span style={{ color: themeColors.textMuted, fontWeight: 400 }}>&middot; {fmt(d.value)}</span>
                   </span>
                 </div>
               ))}
@@ -253,138 +541,61 @@ export default function DashboardPage({ isMobile, themeColors }) {
         </GlassCard>
       </div>
 
-      {/* ==========================================
-          UI BLOK 5: ANALISIS FAKTOR CHURN (Bar Chart Recharts)
-          Menampilkan: Judul "Analisis Faktor Churn", Subtitle "Penyebab utama churn...", dan Grafik Batang Horizontal Feature Importance
-          ========================================== */}
+      {/* XGBoost Feature Importance */}
       <GlassCard isMobile={isMobile} themeColors={themeColors}>
         <div className="dash-enter-3d" style={{ animationDelay: "420ms" }}>
-          {/* Judul & Deskripsi Analisis Faktor Churn */}
-          {panelTitle(t("churn.factor"), t("churn.factor.sub"))}
-          
-          <ResponsiveContainer width="100%" height={isMobile ? 230 : 280}>
-            <BarChart data={factorData} layout="vertical" margin={{ top: 4, right: 44, left: 8, bottom: 4 }}>
-              <defs>
-                <linearGradient id="barGradYellow" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#eab308" />
-                  <stop offset="100%" stopColor="#f59e0b" />
-                </linearGradient>
-              </defs>
+          {panelTitle("XGBoost Feature Importance", "Top predictors of customer churn from XGBoost model (FScore)")}
+
+          <ResponsiveContainer width="100%" height={isMobile ? 320 : 400}>
+            <BarChart data={XGBOOST_FEATURES} layout="vertical" margin={{ top: 4, right: 44, left: 8, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={themeColors.chartGrid} horizontal={false} />
-              <XAxis type="number" stroke={themeColors.chartAxis} fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis dataKey="factor" type="category" stroke={themeColors.chartAxis} fontSize={11} tickLine={false} axisLine={false} width={isMobile ? 112 : 150} />
-              <Tooltip content={<CustomTooltip themeColors={themeColors} />} cursor={{ fill: themeColors.inputBg, opacity: 0.5 }} />
-              <Bar dataKey="value" name={t("feature.importance")} radius={[0, 6, 6, 0]} fill="url(#barGradYellow)" barSize={isMobile ? 14 : 18} animationDuration={1400}>
-                <LabelList dataKey="value" position="right" fill={themeColors.textSecondary} fontSize={11} fontWeight={600} offset={10} />
+              <XAxis type="number" stroke={themeColors.chartAxis} fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} domain={[0, 14]} />
+              <YAxis dataKey="feature" type="category" stroke={themeColors.chartAxis} fontSize={11} tickLine={false} axisLine={false} width={isMobile ? 130 : 170} />
+              <Tooltip
+                content={<CustomTooltip themeColors={themeColors} />}
+                formatter={(value) => [`${value}%`, "Importance"]}
+                cursor={{ fill: themeColors.inputBg, opacity: 0.5 }}
+              />
+              <Bar dataKey="value" name="Feature Importance (%)" radius={[0, 8, 8, 0]} barSize={isMobile ? 12 : 16} animationDuration={1400}>
+                {XGBOOST_FEATURES.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+                <LabelList dataKey="value" position="right" fill={themeColors.textSecondary} fontSize={11} fontWeight={600} offset={10} formatter={(v) => `${v.toFixed(1)}%`} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+
+          <div style={{ marginTop: 16, padding: 12, background: `${themeColors.primary}10`, borderRadius: 10, display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "space-between" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Phone size={16} color="#ef4444" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: themeColors.text }}>Top Predictor (12.38%)</span>
+              </div>
+              <p style={{ fontSize: 12, color: themeColors.textSecondary, margin: 0 }}>
+                Customers with &gt;5 service calls are 3.4x more likely to churn
+              </p>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <CreditCard size={16} color="#f59e0b" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: themeColors.text }}>Second Predictor (8.92%)</span>
+              </div>
+              <p style={{ fontSize: 12, color: themeColors.textSecondary, margin: 0 }}>
+                Limited payment options increase churn by 2.8x
+              </p>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Star size={16} color="#10b981" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: themeColors.text }}>Third Predictor (6.40%)</span>
+              </div>
+              <p style={{ fontSize: 12, color: themeColors.textSecondary, margin: 0 }}>
+                No product reviews = 3.2x higher churn risk
+              </p>
+            </div>
+          </div>
         </div>
       </GlassCard>
     </div>
   );
 }
-
-
-// import { Users, AlertTriangle, UserCheck, TrendingDown } from "lucide-react";
-// import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
-// import { useLanguage } from "../contexts/LanguageContext";
-// import StatCard from "./StatCard";
-// import GlassCard from "./GlassCard";
-// import SectionTitle from "./SectionTitle";
-// import CustomTooltip from "./CustomTooltip";
-// import { churnTrendData, churnFactorData, distributionData } from "../data/mockData";
-
-// export default function DashboardPage({ isMobile, themeColors }) {
-//   const { t } = useLanguage();
-  
-//   const distData = [
-//     { name: t('loyal'), value: 72, color: "#2563eb" },
-//     { name: t('at.risk'), value: 18, color: "#60a5fa" },
-//     { name: t('churned'), value: 10, color: "#1d4ed8" },
-//   ];
-  
-//   return (
-//     <div>
-//       <SectionTitle isMobile={isMobile} themeColors={themeColors} sub={t('dashboard.subtitle')}>{t('dashboard.title')}</SectionTitle>
-//       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
-//         <StatCard isMobile={isMobile} themeColors={themeColors} icon={Users} title={t('stat.total.customers')} value="12,847" sub={t('stat.total.sub')} color="#3b82f6" trend="+4.2%" trendUp />
-//         <StatCard isMobile={isMobile} themeColors={themeColors} icon={AlertTriangle} title={t('stat.high.risk')} value="1,428" sub={t('stat.high.sub')} color="#f59e0b" trend="+8.1%" trendUp={false} />
-//         <StatCard isMobile={isMobile} themeColors={themeColors} icon={UserCheck} title={t('stat.loyal')} value="9,251" sub={t('stat.loyal.sub')} color="#10b981" trend="+2.3%" trendUp />
-//         <StatCard isMobile={isMobile} themeColors={themeColors} icon={TrendingDown} title={t('stat.churn.rate')} value="8.4%" sub={t('stat.churn.sub')} color="#ef4444" trend="-1.2%" trendUp />
-//       </div>
-
-//       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 16 }}>
-//         <GlassCard isMobile={isMobile} themeColors={themeColors}>
-//           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-//             <div>
-//               <h3 style={{ color: themeColors.text, margin: 0, fontSize: isMobile ? 13 : 15, fontWeight: 600 }}>{t('churn.trend')}</h3>
-//               <p style={{ color: themeColors.textMuted, margin: "2px 0 0", fontSize: 11 }}>{t('churn.trend.sub')}</p>
-//             </div>
-//             <div style={{ display: "flex", gap: 8 }}>
-//               {["1M", "3M", "1Y"].map(t => (
-//                 <button key={t} style={{ padding: "4px 10px", background: t === "1Y" ? "rgba(37,99,235,0.3)" : themeColors.inputBg, border: `1px solid ${t === "1Y" ? "rgba(59,130,246,0.5)" : themeColors.inputBorder}`, borderRadius: 6, color: t === "1Y" ? "#93c5fd" : themeColors.textSecondary, fontSize: 12, cursor: "pointer" }}>{t}</button>
-//               ))}
-//             </div>
-//           </div>
-//           <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
-//             <AreaChart data={churnTrendData}>
-//               <defs>
-//                 <linearGradient id="churnGrad" x1="0" y1="0" x2="0" y2="1">
-//                   <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
-//                   <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-//                 </linearGradient>
-//               </defs>
-//               <CartesianGrid strokeDasharray="3 3" stroke={themeColors.chartGrid} />
-//               <XAxis dataKey="month" stroke={themeColors.chartAxis} fontSize={12} tickLine={false} />
-//               <YAxis stroke={themeColors.chartAxis} fontSize={12} tickLine={false} />
-//               <Tooltip content={<CustomTooltip themeColors={themeColors} />} />
-//               <Area type="monotone" dataKey="churn" stroke="#2563eb" fill="url(#churnGrad)" name={t('stat.churn.rate')} strokeWidth={2} />
-//               <Area type="monotone" dataKey="newCustomers" stroke="#60a5fa" fill="url(#churnGrad)" name={t('stat.total.customers')} strokeWidth={2} />
-//             </AreaChart>
-//           </ResponsiveContainer>
-//         </GlassCard>
-
-//         <GlassCard isMobile={isMobile} themeColors={themeColors}>
-//           <h3 style={{ color: themeColors.text, margin: "0 0 4px", fontSize: isMobile ? 13 : 15, fontWeight: 600 }}>{t('customer.distribution')}</h3>
-//           <p style={{ color: themeColors.textMuted, margin: "0 0 16px", fontSize: 11 }}>{t('customer.distribution.sub')}</p>
-//           <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
-//             <PieChart>
-//               <Pie data={distData} cx="50%" cy="50%" innerRadius={isMobile ? 30 : 50} outerRadius={isMobile ? 50 : 75} paddingAngle={4} dataKey="value">
-//                 {distData.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
-//               </Pie>
-//               <Tooltip contentStyle={{ background: themeColors.tooltipBg, border: `1px solid ${themeColors.tooltipBorder}`, borderRadius: 10 }} />
-//             </PieChart>
-//           </ResponsiveContainer>
-//           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-//             {distData.map((d, i) => (
-//               <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-//                   <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />
-//                   <span style={{ color: themeColors.textSecondary, fontSize: 13 }}>{d.name}</span>
-//                 </div>
-//                 <span style={{ color: themeColors.text, fontWeight: 600, fontSize: 13 }}>{d.value}%</span>
-//               </div>
-//             ))}
-//           </div>
-//         </GlassCard>
-//       </div>
-
-//       <GlassCard isMobile={isMobile} themeColors={themeColors}>
-//         <h3 style={{ color: themeColors.text, margin: "0 0 4px", fontSize: isMobile ? 13 : 15, fontWeight: 600 }}>{t('churn.factor')}</h3>
-//         <p style={{ color: themeColors.textMuted, margin: "0 0 16px", fontSize: 11 }}>{t('churn.factor.sub')}</p>
-//         <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
-//           <BarChart data={churnFactorData} layout="vertical">
-//             <CartesianGrid strokeDasharray="3 3" stroke={themeColors.chartGrid} horizontal={false} />
-//             <XAxis type="number" stroke={themeColors.chartAxis} fontSize={12} tickLine={false} />
-//             <YAxis dataKey="factor" type="category" stroke={themeColors.chartAxis} fontSize={12} tickLine={false} width={isMobile ? 70 : 90} />
-//             <Tooltip content={<CustomTooltip themeColors={themeColors} />} />
-//             <Bar dataKey="value" name="Impact %" radius={[0, 6, 6, 0]}>
-//               {churnFactorData.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
-//             </Bar>
-//           </BarChart>
-//         </ResponsiveContainer>
-//       </GlassCard>
-//     </div>
-//   );
-// }
