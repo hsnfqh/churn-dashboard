@@ -1,10 +1,22 @@
 export default function CustomTooltip({ active, payload, label, themeColors }) {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload || !payload.length) return null;
+
   return (
-    <div style={{ background: themeColors.tooltipBg, border: `1px solid ${themeColors.tooltipBorder}`, borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
-      <p style={{ color: themeColors.textSecondary, margin: "0 0 6px", fontWeight: 500 }}>{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color || "#60a5fa", margin: "2px 0", fontWeight: 600 }}>{p.name}: {p.value}{typeof p.value === "number" && p.value < 100 && p.name?.includes("%") ? "%" : ""}</p>
+    <div style={{
+      background: themeColors.bodyBg,
+      border: `1px solid ${themeColors.sidebarBorder}`,
+      borderRadius: 8,
+      padding: "8px 12px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      fontSize: 12
+    }}>
+      <p style={{ margin: 0, color: themeColors.text, fontWeight: 600 }}>{label}</p>
+      {payload.map((item, idx) => (
+        <p key={idx} style={{ margin: "4px 0 0", color: item.color || themeColors.textSecondary }}>
+          {item.name}: {typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
+          {item.name === 'Importance' && item.value < 1 ? ` (${(item.value * 100).toFixed(1)}%)` : ''}
+          {item.name === 'churn' || item.name === 'predicted' ? '%' : ''}
+        </p>
       ))}
     </div>
   );
