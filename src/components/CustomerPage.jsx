@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import GlassCard from "./GlassCard";
 import SectionTitle from "./SectionTitle";
 import html2pdf from "html2pdf.js";
 
-// DATA DARI CSV ANDA (150 BARIS)
+// DATA DARI CSV (150 BARIS)
 const generateSampleData = () => {
   const baseData = [
     { Age: 43, Gender: "male", Country: "France", Days: 46.4, Credit: 2278, Returns: 2.0, Lifetime: 953.33, Total: 94.72, Churned: 0 },
@@ -63,7 +63,7 @@ const generateSampleData = () => {
   const allData = [...baseData];
   const countries = ["France", "UK", "Canada", "USA", "Japan", "Germany", "Australia", "India"];
   const genders = ["male", "female"];
-  
+
   for (let i = baseData.length; i < 150; i++) {
     const template = baseData[i % baseData.length];
     allData.push({
@@ -78,13 +78,12 @@ const generateSampleData = () => {
       Churned: (i % 12 === 0 || i % 25 === 0) ? 1 : 0
     });
   }
-  
+
   return allData;
 };
 
 const sampleData = generateSampleData();
 
-// 50 NAMA LAKI-LAKI DAN 50 NAMA PEREMPUAN
 const getRandomName = (gender, index) => {
   const maleNames = [
     "James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles",
@@ -93,7 +92,7 @@ const getRandomName = (gender, index) => {
     "Gary", "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin",
     "Samuel", "Gregory", "Frank", "Alexander", "Raymond", "Patrick", "Jack", "Dennis", "Jerry", "Tyler"
   ];
-  
+
   const femaleNames = [
     "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen",
     "Lisa", "Nancy", "Betty", "Margaret", "Sandra", "Ashley", "Kimberly", "Emily", "Donna", "Michelle",
@@ -101,65 +100,68 @@ const getRandomName = (gender, index) => {
     "Kathleen", "Amy", "Shirley", "Angela", "Helen", "Anna", "Brenda", "Pamela", "Nicole", "Emma",
     "Samantha", "Katherine", "Christine", "Debra", "Rachel", "Carolyn", "Janet", "Catherine", "Maria", "Heather"
   ];
-  
-  if (gender === "male") {
-    return maleNames[index % maleNames.length];
-  } else {
-    return femaleNames[index % femaleNames.length];
-  }
+
+  return gender === "male" ? maleNames[index % maleNames.length] : femaleNames[index % femaleNames.length];
 };
 
-export default function CustomerPage({ search, setSearch, filterRisk, setFilterRisk, currentPage, setCurrentPage, isMobile, themeColors }) {
+export default function CustomerPage({
+  search,
+  setSearch,
+  filterRisk,
+  setFilterRisk,
+  currentPage,
+  setCurrentPage,
+  isMobile,
+  themeColors
+}) {
   const { t } = useLanguage();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState("All"); // status dikelola sendiri di sini
 
-  const riskColors = { Critical: "#ef4444", High: "#f59e0b", Medium: "#3b82f6", Low: "#10b981" };
+  // Cek mode kecerahan
+  const isLightMode = themeColors.bodyBg === "#ffffff" || themeColors.bodyBg === "#f8fafc" || themeColors.text === "#0f172a" || themeColors.text === "#1e293b";
+
+  // Skema warna kombinasi: Merah (Critical), Oranye (High), Kuning Amber (Medium)
+  const riskColors = {
+    Critical: isLightMode ? "#e11d48" : "#f43f5e",
+    High: isLightMode ? "#ea580c" : "#ff781f",
+    Medium: isLightMode ? "#b45309" : "#fbbf24",
+    Low: isLightMode ? "#16a34a" : "#34d399"
+  };
 
   useEffect(() => {
     const processedData = sampleData.map((row, idx) => {
       let probability = 0;
-      
+
       const returns = row.Returns || 0;
       probability += Math.min(35, returns * 2.5);
-      
+
       const credit = row.Credit || 0;
       if (credit < 500) probability += 25;
       else if (credit < 1000) probability += 15;
       else if (credit < 2000) probability += 8;
-      else if (credit > 5000) probability -= 10;
-      
+
       const days = row.Days || 0;
       if (days < 10) probability += 30;
       else if (days < 30) probability += 15;
-      else if (days < 60) probability += 5;
-      else if (days > 200) probability -= 10;
-      
+
       const lifetime = row.Lifetime || 0;
       if (lifetime < 500) probability += 20;
-      else if (lifetime < 1000) probability += 10;
-      else if (lifetime > 3000) probability -= 15;
-      
+
       const total = row.Total || 0;
       if (total < 50) probability += 15;
-      else if (total > 200) probability -= 10;
-      
-      const age = row.Age || 30;
-      if (age < 25) probability += 10;
-      else if (age > 55) probability -= 5;
-      
+
       if (row.Churned === 1) probability = 95;
-      
       probability = Math.min(100, Math.max(0, Math.round(probability)));
-      
+
       let riskLevel = "Low";
       if (probability >= 70) riskLevel = "Critical";
       else if (probability >= 40) riskLevel = "High";
       else if (probability >= 20) riskLevel = "Medium";
-      else riskLevel = "Low";
-      
+
       if (row.Churned === 1) riskLevel = "Critical";
-      
+
       let factor = "Normal profile";
       if (returns > 15) factor = "High return rate";
       else if (credit < 500) factor = "Low credit score";
@@ -169,17 +171,17 @@ export default function CustomerPage({ search, setSearch, filterRisk, setFilterR
       else if (total < 50) factor = "Low purchase amount";
       else if (probability > 70) factor = "Multiple risk factors";
       else if (probability > 40) factor = "Moderate risk factors";
-      
+
       let recommendation = "Regular monitoring";
       if (row.Churned === 1) recommendation = "Urgent re-engagement campaign";
       else if (probability > 70) recommendation = "Immediate retention call";
       else if (probability > 40) recommendation = "Send personalized offer";
       else if (probability > 20) recommendation = "Monitor & engage regularly";
-      
+
       return {
         id: idx + 1,
         name: getRandomName(row.Gender, idx),
-        age: age,
+        age: row.Age || 30,
         country: row.Country || "-",
         tenure: Math.max(1, Math.floor(days / 30)),
         probability: probability,
@@ -189,18 +191,25 @@ export default function CustomerPage({ search, setSearch, filterRisk, setFilterR
         isChurned: row.Churned === 1
       };
     });
-    
+
     setCustomers(processedData);
-    setLoading(false);
+    loading && setLoading(false);
   }, []);
 
   const filteredCustomers = customers.filter(c => {
-    const matchSearch = !search || 
+    const matchSearch = !search ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.id.toString().includes(search) ||
       c.country.toLowerCase().includes(search.toLowerCase());
+
     const matchRisk = filterRisk === "All" || c.riskLevel === filterRisk;
-    return matchSearch && matchRisk;
+
+    // Logika filter status
+    let matchStatus = true;
+    if (filterStatus === "Churned") matchStatus = c.isChurned;
+    else if (filterStatus === "Active") matchStatus = !c.isChurned;
+
+    return matchSearch && matchRisk && matchStatus;
   });
 
   const itemsPerPage = 10;
@@ -236,99 +245,84 @@ export default function CustomerPage({ search, setSearch, filterRisk, setFilterR
     URL.revokeObjectURL(url);
   };
 
-  // PDF VERSI BAGUS (dengan statistik card, warna, tabel lengkap)
   const handleExportPDF = () => {
     const totalChurned = filteredCustomers.filter(c => c.isChurned).length;
     const totalCritical = filteredCustomers.filter(c => c.riskLevel === "Critical").length;
     const totalHigh = filteredCustomers.filter(c => c.riskLevel === "High").length;
     const totalMedium = filteredCustomers.filter(c => c.riskLevel === "Medium").length;
     const totalLow = filteredCustomers.filter(c => c.riskLevel === "Low").length;
-    
+
     const element = document.createElement('div');
     element.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h1 style="color: #1e3a8a; text-align: center; margin-bottom: 5px;">Customer Churn Report</h1>
-        <div style="text-align: center; color: #666; margin-bottom: 20px;">Customer Churn Dashboard</div>
-        
-        <div style="margin-bottom: 20px; background: #f3f4f6; padding: 15px; border-radius: 8px;">
-          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-          <p><strong>Total Customers:</strong> ${filteredCustomers.length}</p>
-          <p><strong>Churned Customers:</strong> ${totalChurned} (${((totalChurned/filteredCustomers.length)*100).toFixed(1)}%)</p>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 30px; color: #1e293b;">
+        <h1 style="color: #0f172a; font-size: 24px; font-weight: 700; margin-bottom: 4px;">Customer Risk & Churn Report</h1>
+        <div style="color: #64748b; font-size: 13px; margin-bottom: 24px;">Generated on ${new Date().toLocaleString()}</div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; justify-content: space-between;">
+          <div><strong>Total Customers Evaluated:</strong> ${filteredCustomers.length}</div>
+          <div><strong>Active Churn Case:</strong> ${totalChurned} (${((totalChurned/filteredCustomers.length)*100).toFixed(1)}%)</div>
         </div>
-        
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-          <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 20px; text-align: center; flex: 1;">
-            <h3 style="margin: 0; font-size: 24px; color: #ef4444;">${totalCritical}</h3>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">Critical Risk</p>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; text-align: center; flex: 1;">
+            <div style="font-size: 20px; font-weight: 700; color: #dc2626;">${totalCritical}</div>
+            <div style="color: #64748b; font-size: 11px; font-weight: 500; text-transform: uppercase; margin-top: 2px;">Critical Risk</div>
           </div>
-          <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 20px; text-align: center; flex: 1;">
-            <h3 style="margin: 0; font-size: 24px; color: #f59e0b;">${totalHigh}</h3>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">High Risk</p>
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; text-align: center; flex: 1;">
+            <div style="font-size: 20px; font-weight: 700; color: #ea580c;">${totalHigh}</div>
+            <div style="color: #64748b; font-size: 11px; font-weight: 500; text-transform: uppercase; margin-top: 2px;">High Risk</div>
           </div>
-          <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 20px; text-align: center; flex: 1;">
-            <h3 style="margin: 0; font-size: 24px; color: #3b82f6;">${totalMedium}</h3>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">Medium Risk</p>
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; text-align: center; flex: 1;">
+            <div style="font-size: 20px; font-weight: 700; color: #2563eb;">${totalMedium}</div>
+            <div style="color: #64748b; font-size: 11px; font-weight: 500; text-transform: uppercase; margin-top: 2px;">Medium Risk</div>
           </div>
-          <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 20px; text-align: center; flex: 1;">
-            <h3 style="margin: 0; font-size: 24px; color: #10b981;">${totalLow}</h3>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">Low Risk</p>
-          </div>
-          <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 20px; text-align: center; flex: 1;">
-            <h3 style="margin: 0; font-size: 24px; color: #ef4444;">${totalChurned}</h3>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">Churned</p>
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; text-align: center; flex: 1;">
+            <div style="font-size: 20px; font-weight: 700; color: #16a34a;">${totalLow}</div>
+            <div style="color: #64748b; font-size: 11px; font-weight: 500; text-transform: uppercase; margin-top: 2px;">Low Risk</div>
           </div>
         </div>
-        
-        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
           <thead>
-            <tr style="background-color: #1e3a8a;">
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">ID</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Name</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Age</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Country</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Tenure</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Risk Level</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Probability</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Main Factor</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Recommendation</th>
-              <th style="padding: 8px; border: 1px solid #ddd; color: white; text-align: left;">Status</th>
+            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+              <th style="padding: 10px; text-align: left; font-weight: 600;">ID</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Name</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Age</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Country</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Tenure</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Risk Level</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Probability</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Main Factor</th>
+              <th style="padding: 10px; text-align: left; font-weight: 600;">Status</th>
              </tr>
           </thead>
           <tbody>
             ${filteredCustomers.map(c => `
-              <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.id}</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.name}</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.age}</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.country}</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.tenure}m</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">
-                  <span style="background: ${c.riskLevel === 'Critical' ? '#ef4444' : c.riskLevel === 'High' ? '#f59e0b' : c.riskLevel === 'Medium' ? '#3b82f6' : '#10b981'}20; padding: 2px 6px; border-radius: 10px;">
-                    ${c.riskLevel}
-                  </span>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 8px; color: #64748b;">${c.id}</td>
+                <td style="padding: 8px; font-weight: 500;">${c.name}</td>
+                <td style="padding: 8px;">${c.age}</td>
+                <td style="padding: 8px;">${c.country}</td>
+                <td style="padding: 8px;">${c.tenure}m</td>
+                <td style="padding: 8px; font-weight: 600; color: ${c.riskLevel === 'Critical' ? '#dc2626' : c.riskLevel === 'High' ? '#ea580c' : c.riskLevel === 'Medium' ? '#2563eb' : '#16a34a'};">
+                  ${c.riskLevel}
                 </td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.probability}%</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.factor}</td>
-                <td style="padding: 6px; border: 1px solid #ddd;">${c.recommendation}</td>
-                <td style="padding: 6px; border: 1px solid #ddd; color: ${c.isChurned ? '#ef4444' : '#10b981'}; font-weight: bold;">
+                <td style="padding: 8px; font-weight: 600;">${c.probability}%</td>
+                <td style="padding: 8px; color: #475569;">${c.factor}</td>
+                <td style="padding: 8px; font-weight: 500; color: ${c.isChurned ? '#dc2626' : '#16a34a'};">
                   ${c.isChurned ? "Churned" : "Active"}
                 </td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        
-        <div style="margin-top: 20px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
-          <p>Generated from Customer Churn Dashboard - ${new Date().toLocaleDateString()}</p>
-          <p>This report is confidential and for internal use only.</p>
-        </div>
       </div>
     `;
-    
-    html2pdf().set({ 
-      margin: 0.5, 
-      filename: `customer_report_${new Date().toISOString().split('T')[0]}.pdf`, 
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } 
+
+    html2pdf().set({
+      margin: 0.4,
+      filename: `customer_analytics_${new Date().toISOString().split('T')[0]}.pdf`,
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
     }).from(element).save();
   };
 
@@ -337,74 +331,200 @@ export default function CustomerPage({ search, setSearch, filterRisk, setFilterR
       <div>
         <SectionTitle isMobile={isMobile} themeColors={themeColors}>{t('customer.management')}</SectionTitle>
         <GlassCard isMobile={isMobile} themeColors={themeColors}>
-          <div style={{ textAlign: "center", padding: 40, color: themeColors.textSecondary }}>Loading 150 customer data...</div>
+          <div style={{ textAlign: "center", padding: 40, color: themeColors.textSecondary }}>Loading analytical engine...</div>
         </GlassCard>
       </div>
     );
   }
 
+  const tableHeaderBg = isLightMode ? "#f1f5f9" : "rgba(30, 41, 59, 0.5)";
+  const tableHeaderTextColor = isLightMode ? "#334155" : "#94a3b8";
+  const subInfoColor = isLightMode ? "#0f172a" : themeColors.textSecondary;
+
   return (
     <div>
-      <SectionTitle isMobile={isMobile} themeColors={themeColors} sub={`${filteredCustomers.length} ${t('customers.found')} (${customers.filter(c => c.isChurned).length} ${t('churned.status')}, ${customers.filter(c => c.riskLevel === "Critical").length} ${t('critical')} ${t('risk.level')})`}>
+      <style>{`
+        @keyframes cleanFadeIn {
+          0% { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .dash-enter-clean { animation: cleanFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .clean-row { transition: background-color 0.15s ease, transform 0.15s ease; }
+        .clean-row:hover {
+          background-color: ${isLightMode ? "#f8fafc" : "rgba(51, 65, 85, 0.3)"} !important;
+          transform: translateX(2px);
+        }
+
+        .clean-select {
+          appearance: none;
+          cursor: pointer;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .clean-select:hover {
+          border-color: ${isLightMode ? "#cbd5e1" : "#475569"} !important;
+        }
+        .clean-select:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 1px #3b82f6;
+        }
+
+        .btn-clean { transition: background-color 0.15s ease, border-color 0.15s ease; }
+        .btn-clean:hover {
+          background-color: ${isLightMode ? "#f8fafc" : "rgba(255,255,255,0.03)"} !important;
+          border-color: ${isLightMode ? "#cbd5e1" : "#475569"} !important;
+        }
+      `}</style>
+
+      {/* SUB-HEADER UTAMA DENGAN WARNA ADAPTIF KONTRAST TINGGI */}
+      <SectionTitle
+        isMobile={isMobile}
+        themeColors={themeColors}
+        sub={
+          <span style={{ color: subInfoColor, fontWeight: 500, fontSize: 14 }}>
+            {filteredCustomers.length} {t('customers.found')} ({customers.filter(c => c.isChurned).length} {t('churned.status')})
+          </span>
+        }
+      >
         {t('customer.management')}
       </SectionTitle>
+
       <GlassCard isMobile={isMobile} themeColors={themeColors}>
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
+
+          {/* SEARCH BAR */}
           <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: themeColors.textMuted }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} style={{ width: "100%", padding: "9px 12px 9px 34px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 10, color: themeColors.text, fontSize: 14, outline: "none" }} />
+            <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.textMuted }} />
+            <input value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} placeholder={t('search.placeholder')} style={{ width: "100%", padding: "9px 12px 9px 36px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, color: themeColors.text, fontSize: 13, outline: "none" }} />
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["All", "Critical", "High", "Medium", "Low"].map(r => (
-              <button key={r} onClick={() => setFilterRisk(r)} style={{ padding: "8px 14px", background: filterRisk === r ? "rgba(37,99,235,0.3)" : themeColors.inputBg, border: `1px solid ${filterRisk === r ? "rgba(59,130,246,0.5)" : themeColors.inputBorder}`, borderRadius: 8, color: filterRisk === r ? "#93c5fd" : themeColors.textSecondary, fontSize: 13, cursor: "pointer" }}>{r === "All" ? "Semua" : r === "Critical" ? t('critical') : r === "High" ? t('high') : r === "Medium" ? t('medium') : t('low')}</button>
-            ))}
+
+          {/* FILTER TINGKAT RISIKO */}
+          <div style={{ position: "relative", minWidth: isMobile ? "100%" : "160px" }}>
+            <Filter size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: filterRisk !== "All" ? "#3b82f6" : themeColors.textMuted, zIndex: 2, pointerEvents: "none" }} />
+            <select
+              value={filterRisk}
+              onChange={e => { setFilterRisk(e.target.value); setCurrentPage(1); }}
+              className="clean-select"
+              style={{
+                width: "100%",
+                padding: "9px 30px 9px 34px",
+                background: themeColors.inputBg,
+                border: `1px solid ${themeColors.inputBorder}`,
+                borderRadius: 8,
+                color: themeColors.text,
+                fontSize: 13,
+                fontWeight: 500,
+                outline: "none"
+              }}
+            >
+              <option value="All" style={{ background: themeColors.bodyBg, color: themeColors.text }}>Tingkat Risiko</option>
+              <option value="Critical" style={{ background: themeColors.bodyBg, color: riskColors.Critical }}>Critical</option>
+              <option value="High" style={{ background: themeColors.bodyBg, color: riskColors.High }}>High</option>
+              <option value="Medium" style={{ background: themeColors.bodyBg, color: riskColors.Medium }}>Medium</option>
+              <option value="Low" style={{ background: themeColors.bodyBg, color: riskColors.Low }}>Low</option>
+            </select>
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.textMuted, pointerEvents: "none", fontSize: 9 }}>▼</span>
           </div>
-          <button onClick={handleExportCSV} style={{ padding: "8px 14px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, color: themeColors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><Download size={14} /> {t('export')} CSV</button>
-          <button onClick={handleExportPDF} style={{ padding: "8px 14px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, color: themeColors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><Download size={14} /> {t('export')} PDF</button>
+
+          {/* FILTER STATUS */}
+          <div style={{ position: "relative", minWidth: isMobile ? "100%" : "140px" }}>
+            <Filter size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: filterStatus !== "All" ? "#3b82f6" : themeColors.textMuted, zIndex: 2, pointerEvents: "none" }} />
+            <select
+              value={filterStatus}
+              onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+              className="clean-select"
+              style={{
+                width: "100%",
+                padding: "9px 30px 9px 34px",
+                background: themeColors.inputBg,
+                border: `1px solid ${themeColors.inputBorder}`,
+                borderRadius: 8,
+                color: themeColors.text,
+                fontSize: 13,
+                fontWeight: 500,
+                outline: "none"
+              }}
+            >
+              <option value="All" style={{ background: themeColors.bodyBg, color: themeColors.text }}>Status Churned</option>
+              <option value="Active" style={{ background: themeColors.bodyBg, color: isLightMode ? "#16a34a" : "#22c55e" }}>Active</option>
+              <option value="Churned" style={{ background: themeColors.bodyBg, color: isLightMode ? "#dc2626" : "#ef4444" }}>Churned</option>
+            </select>
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.textMuted, pointerEvents: "none", fontSize: 9 }}>▼</span>
+          </div>
+
+          <button onClick={handleExportCSV} className="btn-clean" style={{ padding: "8px 14px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, color: themeColors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><Download size={14} /> CSV</button>
+          <button onClick={handleExportPDF} className="btn-clean" style={{ padding: "8px 14px", background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, color: themeColors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><Download size={14} /> PDF</button>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: isMobile ? 11 : 13 }}>
+        {/* DATA TABLE */}
+        <div style={{ overflowX: "auto", border: `1px solid ${themeColors.sidebarBorder}`, borderRadius: 8 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: isMobile ? 12 : 13 }}>
             <thead>
-              <tr style={{ background: "linear-gradient(135deg, rgba(29,78,216,0.4), rgba(37,99,235,0.2))" }}>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('customer.id.table')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('name')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('age.table')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('country')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('tenure.table')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('risk.level')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('probability.table')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('main.factor')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('recommendation')}</th>
-                <th style={{ padding: "12px 14px", color: "#93c5fd", textAlign: "left" }}>{t('status')}</th>
+              <tr style={{ backgroundColor: tableHeaderBg, borderBottom: `1px solid ${themeColors.sidebarBorder}` }}>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('customer.id.table')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('name')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('age.table')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('country')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('tenure.table')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('risk.level')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('probability.table')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('main.factor')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('recommendation')}</th>
+                <th style={{ padding: "12px 14px", color: tableHeaderTextColor, textAlign: "left", fontWeight: 600 }}>{t('status')}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody key={currentPage} className="dash-enter-clean">
               {paginatedCustomers.map((c, i) => (
-                <tr key={c.id} style={{ borderBottom: `1px solid ${themeColors.sidebarBorder}`, background: i % 2 === 0 ? themeColors.tableRowEven : themeColors.tableRowOdd }}>
-                  <td style={{ padding: "12px 14px", color: "#60a5fa", fontFamily: "monospace" }}>{c.id}</td>
+                <tr key={c.id} className="clean-row" style={{ borderBottom: `1px solid ${themeColors.sidebarBorder}`, background: i % 2 === 0 ? "transparent" : (isLightMode ? "#f8fafc" : "rgba(255,255,255,0.01)") }}>
+                  <td style={{ padding: "12px 14px", color: themeColors.textMuted, fontFamily: "monospace" }}>{c.id}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.text, fontWeight: 500 }}>{c.name}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.textSecondary }}>{c.age}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.textSecondary }}>{c.country}</td>
                   <td style={{ padding: "12px 14px", color: themeColors.textSecondary }}>{c.tenure}m</td>
-                  <td style={{ padding: "12px 14px" }}><span style={{ padding: "4px 10px", background: `${riskColors[c.riskLevel]}18`, border: `1px solid ${riskColors[c.riskLevel]}44`, borderRadius: 20, color: riskColors[c.riskLevel], fontSize: 11, fontWeight: 600 }}>{c.riskLevel === "Critical" ? t('critical') : c.riskLevel === "High" ? t('high') : c.riskLevel === "Medium" ? t('medium') : t('low')}</span></td>
-                  <td style={{ padding: "12px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ flex: 1, height: 4, background: themeColors.inputBorder, borderRadius: 4, overflow: "hidden", width: 60 }}><div style={{ height: "100%", width: `${c.probability}%`, background: c.probability >= 70 ? "#ef4444" : c.probability >= 40 ? "#f59e0b" : "#10b981", borderRadius: 4 }} /></div><span style={{ color: themeColors.text, fontWeight: 600, minWidth: 36 }}>{c.probability}%</span></div></td>
-                  <td style={{ padding: "12px 14px", color: themeColors.textSecondary, fontSize: 12 }}>{c.factor === "Normal profile" ? t('normal.profile') : c.factor === "High return rate" ? t('high.return.rate') : c.factor === "Low credit score" ? t('low.credit.score') : c.factor === "Very low activity" ? t('very.low.activity') : c.factor === "Low activity" ? t('low.activity') : c.factor === "Low lifetime value" ? t('low.lifetime.value') : c.factor === "Low purchase amount" ? t('low.purchase.amount') : c.factor === "Multiple risk factors" ? t('multiple.risk.factors') : t('moderate.risk.factors')}</td>
-                  <td style={{ padding: "12px 14px", color: "#60a5fa", fontSize: 12 }}>{c.recommendation === "Regular monitoring" ? t('regular.monitoring') : c.recommendation === "Urgent re-engagement campaign" ? t('urgent.reengagement') : c.recommendation === "Immediate retention call" ? t('immediate.retention') : c.recommendation === "Send personalized offer" ? t('send.personalized.offer') : t('monitor.engage')}</td>
-                  <td style={{ padding: "12px 14px" }}><span style={{ padding: "4px 8px", background: c.isChurned ? "#ef444418" : "#10b98118", borderRadius: 12, color: c.isChurned ? "#ef4444" : "#10b981", fontSize: 11 }}>{c.isChurned ? t('churned.status') : t('active')}</span></td>
+
+                  <td style={{ padding: "12px 14px" }}>
+                    <span style={{ padding: "3px 8px", background: `${riskColors[c.riskLevel]}12`, border: `1px solid ${riskColors[c.riskLevel]}33`, borderRadius: 4, color: riskColors[c.riskLevel], fontSize: 11, fontWeight: 600 }}>
+                      {c.riskLevel}
+                    </span>
+                  </td>
+
+                  <td style={{ padding: "12px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, height: 5, background: isLightMode ? "#e2e8f0" : "#334155", borderRadius: 3, overflow: "hidden", width: 50 }}>
+                        <div style={{ height: "100%", width: `${c.probability}%`, background: riskColors[c.riskLevel], borderRadius: 3 }} />
+                      </div>
+                      <span style={{ color: themeColors.text, fontWeight: 500, minWidth: 32, fontSize: 12 }}>{c.probability}%</span>
+                    </div>
+                  </td>
+
+                  <td style={{ padding: "12px 14px", color: themeColors.textSecondary, fontSize: 12 }}>{c.factor}</td>
+                  <td style={{ padding: "12px 14px", color: isLightMode ? "#2563eb" : "#60a5fa", fontSize: 12 }}>{c.recommendation}</td>
+
+                  <td style={{ padding: "12px 14px" }}>
+                    <span style={{ fontWeight: 500, color: c.isChurned ? (isLightMode ? "#dc2626" : "#ef4444") : (isLightMode ? "#16a34a" : "#22c55e") }}>
+                      {c.isChurned ? "Churned" : "Active"}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
+        {/* PAGINATION PANEL */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
-          <span style={{ color: themeColors.textMuted, fontSize: 13 }}>{t('showing')} {startIndex + 1}–{Math.min(endIndex, filteredCustomers.length)} {t('of')} {filteredCustomers.length}</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{ width: 32, height: 32, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === 1 ? 0.5 : 1 }}><ChevronLeft size={16} /></button>
-            {getPageNumbers().map(p => (<button key={p} onClick={() => setCurrentPage(p)} style={{ width: 32, height: 32, background: currentPage === p ? "rgba(37,99,235,0.4)" : themeColors.inputBg, border: `1px solid ${currentPage === p ? "rgba(59,130,246,0.5)" : themeColors.inputBorder}`, borderRadius: 8, color: currentPage === p ? "#93c5fd" : themeColors.textSecondary, cursor: "pointer", fontSize: 13 }}>{p}</button>))}
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ width: 32, height: 32, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === totalPages ? 0.5 : 1 }}><ChevronRight size={16} /></button>
-          </div>
+          <span style={{ color: themeColors.textSecondary, fontSize: 13 }}>
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} entries
+          </span>
+          {totalPages > 1 && (
+            <div style={{ display: "flex", gap: 4 }}>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} style={{ padding: 6, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 6, color: currentPage === 1 ? themeColors.textMuted : themeColors.text, cursor: currentPage === 1 ? "not-allowed" : "pointer" }}><ChevronLeft size={16} /></button>
+              {getPageNumbers().map(p => (
+                <button key={p} onClick={() => setCurrentPage(p)} style={{ padding: "6px 12px", background: currentPage === p ? "#3b82f6" : themeColors.inputBg, border: `1px solid ${currentPage === p ? "#3b82f6" : themeColors.inputBorder}`, borderRadius: 6, color: currentPage === p ? "#fff" : themeColors.text, fontWeight: 500, cursor: "pointer", fontSize: 13 }}>{p}</button>
+              ))}
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} style={{ padding: 6, background: themeColors.inputBg, border: `1px solid ${themeColors.inputBorder}`, borderRadius: 6, color: currentPage === totalPages ? themeColors.textMuted : themeColors.text, cursor: currentPage === totalPages ? "not-allowed" : "pointer" }}><ChevronRight size={16} /></button>
+            </div>
+          )}
         </div>
       </GlassCard>
     </div>
