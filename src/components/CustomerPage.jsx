@@ -3,6 +3,8 @@ import { Search, Download, ChevronLeft, ChevronRight, Filter, Loader } from "luc
 import { useLanguage } from "../contexts/LanguageContext";
 import GlassCard from "./GlassCard";
 import SectionTitle from "./SectionTitle";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Feature importance dari XGBoost model
 const XGBOOST_FEATURES = {
@@ -82,7 +84,6 @@ export default function CustomerPage({
     const loadCustomers = async () => {
       setLoading(true);
       try {
-        // Import CSV
         const csvModule = await import("../data/customers.csv?url");
         const response = await fetch(csvModule.default);
         const csvText = await response.text();
@@ -108,7 +109,6 @@ export default function CustomerPage({
           return customer;
         });
 
-        // Process customers dengan XGBoost predictions
         const processedCustomers = customersData.map((customer, idx) => {
           const churnProbability = calculateChurnProbability(customer);
 
@@ -148,7 +148,6 @@ export default function CustomerPage({
         setCustomers(processedCustomers);
       } catch (error) {
         console.error("Error loading customers:", error);
-        // Generate sample data jika error
         const sampleCustomers = [];
         for (let i = 0; i < 50; i++) {
           let riskType = "Low";
@@ -229,75 +228,121 @@ export default function CustomerPage({
     URL.revokeObjectURL(url);
   };
 
-  // Export PDF menggunakan window.print
+  // ==============================================
+  // EXPORT PDF LANGSUNG (tanpa print dialog)
+  // ==============================================
   const handleExportPDF = () => {
-    const printWindow = window.open('', '_blank');
     const totalChurned = filteredCustomers.filter(c => c.isChurned).length;
     const totalCritical = filteredCustomers.filter(c => c.riskLevel === "Critical").length;
     const totalHigh = filteredCustomers.filter(c => c.riskLevel === "High").length;
     const totalMedium = filteredCustomers.filter(c => c.riskLevel === "Medium").length;
     const totalLow = filteredCustomers.filter(c => c.riskLevel === "Low").length;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Customer Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { color: #1e293b; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f1f5f9; }
-            .summary { display: flex; gap: 20px; margin: 20px 0; }
-            .summary-card { border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center; flex: 1; }
-            .risk-critical { color: #dc2626; }
-            .risk-high { color: #ea580c; }
-            .risk-medium { color: #2563eb; }
-            .risk-low { color: #16a34a; }
-          </style>
-        </head>
-        <body>
-          <h1>Customer Risk & Churn Report</h1>
-          <p>Generated on: ${new Date().toLocaleString()}</p>
-          <p><strong>Model:</strong> XGBoost Churn Prediction (87% accuracy)</p>
-          
-          <div class="summary">
-            <div class="summary-card"><strong>Total Customers</strong><br/>${filteredCustomers.length}</div>
-            <div class="summary-card"><strong>Churned</strong><br/>${totalChurned}</div>
-            <div class="summary-card"><strong>Churn Rate</strong><br/>${((totalChurned / filteredCustomers.length) * 100).toFixed(1)}%</div>
-          </div>
-          
-          <div class="summary">
-            <div class="summary-card"><span class="risk-critical">Critical Risk</span><br/>${totalCritical}</div>
-            <div class="summary-card"><span class="risk-high">High Risk</span><br/>${totalHigh}</div>
-            <div class="summary-card"><span class="risk-medium">Medium Risk</span><br/>${totalMedium}</div>
-            <div class="summary-card"><span class="risk-low">Low Risk</span><br/>${totalLow}</div>
-          </div>
-          
-          <table>
-            <thead>
-              <tr><th>ID</th><th>Name</th><th>Age</th><th>Country</th><th>Tenure</th><th>Risk</th><th>Probability</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              ${filteredCustomers.map(c => `
-                <tr>
-                  <td>${c.id}</td>
-                  <td>${c.name}</td>
-                  <td>${c.age}</td>
-                  <td>${c.country}</td>
-                  <td>${c.tenure}m</td>
-                  <td class="risk-${c.riskLevel.toLowerCase()}">${c.riskLevel}</td>
-                  <td>${c.probability}%</td>
-                  <td>${c.isChurned ? "Churned" : "Active"}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    // Buat dokumen PDF baru
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Customer Risk & Churn Report", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Model: XGBoost Churn Prediction (87% accuracy)`, 14, 34);
+    
+    // Summary Cards
+    const startY = 42;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, startY, 45, 20, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Total Customers", 18, startY + 7);
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${filteredCustomers.length}`, 18, startY + 16);
+    
+    doc.rect(63, startY, 45, 20, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Churned", 67, startY + 7);
+    doc.setFontSize(16);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`${totalChurned}`, 67, startY + 16);
+    
+    doc.rect(112, startY, 45, 20, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Churn Rate", 116, startY + 7);
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${((totalChurned / filteredCustomers.length) * 100).toFixed(1)}%`, 116, startY + 16);
+    
+    // Risk Distribution
+    doc.rect(161, startY, 45, 20, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Critical Risk", 165, startY + 7);
+    doc.setFontSize(16);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`${totalCritical}`, 165, startY + 16);
+    
+    doc.rect(210, startY, 45, 20, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("High Risk", 214, startY + 7);
+    doc.setFontSize(16);
+    doc.setTextColor(234, 88, 12);
+    doc.text(`${totalHigh}`, 214, startY + 16);
+    
+    // Table data
+    const tableData = filteredCustomers.map(c => [
+      c.id.toString(),
+      c.name,
+      c.age.toString(),
+      c.country,
+      `${c.tenure}m`,
+      c.riskLevel,
+      `${c.probability}%`,
+      c.factor,
+      c.recommendation,
+      c.isChurned ? "Churned" : "Active"
+    ]);
+    
+    autoTable(doc, {
+      startY: startY + 28,
+      head: [["ID", "Name", "Age", "Country", "Tenure", "Risk", "Prob", "Factor", "Recommendation", "Status"]],
+      body: tableData,
+      theme: "striped",
+      headStyles: { fillColor: [241, 245, 249], textColor: [51, 65, 85], fontStyle: "bold", fontSize: 9 },
+      bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 12 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 15 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 15 },
+        7: { cellWidth: 45 },
+        8: { cellWidth: 45 },
+        9: { cellWidth: 18 }
+      }
+    });
+    
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+    }
+    
+    // Download PDF
+    doc.save(`customer_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   if (loading) {
@@ -338,7 +383,7 @@ export default function CustomerPage({
       <GlassCard isMobile={isMobile} themeColors={themeColors}>
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-            <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.text}} />
+            <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: themeColors.text }} />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
