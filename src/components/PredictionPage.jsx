@@ -42,6 +42,35 @@ export default function PredictionPage({
     gap: 14
   };
 
+  const placeholders = {
+    Customer_Name: "Contoh: Ardien",
+    Age: "Contoh: 25",
+    Country: "Contoh: Indonesia",
+    City: "Contoh: Bogor",
+
+    Membership_Years: "Contoh: 2",
+    Login_Frequency: "Contoh: 20",
+    Session_Duration_Avg: "Contoh: 30",
+    Pages_Per_Session: "Contoh: 5",
+    Mobile_App_Usage: "Contoh: 80",
+
+    Total_Purchases: "Contoh: 15",
+    Average_Order_Value: "Contoh: 500000",
+    Wishlist_Items: "Contoh: 3",
+    Cart_Abandonment_Rate: "Contoh: 20",
+    Days_Since_Last_Purchase: "Contoh: 7",
+
+    Lifetime_Value: "Contoh: 5000000",
+    Credit_Balance: "Contoh: 100000",
+    Discount_Usage_Rate: "Contoh: 30",
+    Returns_Rate: "Contoh: 5",
+    Email_Open_Rate: "Contoh: 60",
+    Customer_Service_Calls: "Contoh: 2",
+    Product_Reviews_Written: "Contoh: 5",
+    Social_Media_Engagement_Score: "Contoh: 75",
+    Payment_Method_Diversity: "Contoh: 2"
+  };
+
   const riskColor =
     result?.level === "HIGH RISK"
       ? "#ef4444"
@@ -61,9 +90,9 @@ export default function PredictionPage({
       <SectionTitle
         isMobile={isMobile}
         themeColors={themeColors}
-        sub="Prediksi kemungkinan pelanggan berhenti menggunakan layanan"
+        sub="Isi data pelanggan untuk mengetahui kemungkinan pelanggan berhenti menggunakan layanan."
       >
-        Prediksi Churn Pelanggan
+        Prediksi Risiko Churn Pelanggan
       </SectionTitle>
 
       <div
@@ -76,18 +105,47 @@ export default function PredictionPage({
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* DATA PELANGGAN */}
+          <GlassCard
+            isMobile={isMobile}
+            themeColors={themeColors}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: themeColors.textSecondary,
+                lineHeight: 1.7,
+                fontSize: 14
+              }}
+            >
+              Isi data pelanggan di bawah ini, lalu klik
+              <strong> "Prediksi Risiko Churn"</strong>
+              untuk melihat tingkat risiko pelanggan berhenti menggunakan layanan
+              beserta rekomendasi tindakan yang dapat dilakukan.
+            </p>
+          </GlassCard>
+
+          {/* Profil Pelanggan */}
           <GlassCard isMobile={isMobile} themeColors={themeColors}>
             <h3 style={{ color: "#60a5fa", marginBottom: 16 }}>
-              👤 Data Pelanggan
+              👤 Profil Pelanggan
             </h3>
 
             <div style={fieldGroup}>
               <div>
-                <label style={labelStyle}>Umur</label>
+                <label style={labelStyle}>Nama Pelanggan</label>
+                <input
+                  value={formData.Customer_Name || ""}
+                  placeholder={placeholders.Customer_Name}
+                  onChange={(e) => set("Customer_Name", e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Usia Pelanggan</label>
                 <input
                   type="number"
                   value={formData.Age}
+                  placeholder={placeholders.Age}
                   onChange={(e) => set("Age", e.target.value)}
                   style={inputStyle}
                 />
@@ -97,6 +155,7 @@ export default function PredictionPage({
                 <label style={labelStyle}>Jenis Kelamin</label>
                 <select
                   value={formData.Gender}
+                  placeholder={placeholders.Gender}
                   onChange={(e) => set("Gender", e.target.value)}
                   style={inputStyle}
                 >
@@ -106,25 +165,27 @@ export default function PredictionPage({
               </div>
 
               <div>
-                <label style={labelStyle}>Negara</label>
+                <label style={labelStyle}>Negara Domisili</label>
                 <input
                   value={formData.Country}
+                  placeholder={placeholders.Country}
                   onChange={(e) => set("Country", e.target.value)}
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label style={labelStyle}>Kota</label>
+                <label style={labelStyle}>Kota Domisili</label>
                 <input
                   value={formData.City}
+                  placeholder={placeholders.City}
                   onChange={(e) => set("City", e.target.value)}
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label style={labelStyle}>Kuartal Pendaftaran</label>
+                <label style={labelStyle}>Periode Bergabung</label>
                 <select
                   value={formData.Signup_Quarter}
                   onChange={(e) =>
@@ -144,16 +205,16 @@ export default function PredictionPage({
           {/* AKTIVITAS */}
           <GlassCard isMobile={isMobile} themeColors={themeColors}>
             <h3 style={{ color: "#60a5fa", marginBottom: 16 }}>
-              📈 Aktivitas Pengguna
+              📱 Aktivitas Penggunaan Layanan
             </h3>
 
             <div style={fieldGroup}>
               {[
-                ["Membership_Years", "Lama Berlangganan"],
-                ["Login_Frequency", "Frekuensi Login"],
-                ["Session_Duration_Avg", "Durasi Sesi Rata-rata"],
-                ["Pages_Per_Session", "Halaman per Sesi"],
-                ["Mobile_App_Usage", "Penggunaan Mobile App"]
+                ["Membership_Years","Lama Menjadi Pelanggan (tahun)"],
+                ["Login_Frequency","Jumlah Login per Bulan"],
+                ["Session_Duration_Avg","Rata-rata Waktu Penggunaan (menit)"],
+                ["Pages_Per_Session","Halaman yang Dilihat per Kunjungan"],
+                ["Mobile_App_Usage","Tingkat Penggunaan Aplikasi (%)"]
               ].map(([key, label]) => (
                 <div key={key}>
                   <label style={labelStyle}>{label}</label>
@@ -161,6 +222,7 @@ export default function PredictionPage({
                     type="number"
                     value={formData[key]}
                     onChange={(e) => set(key, e.target.value)}
+                    placeholder={placeholders[key]}
                     style={inputStyle}
                   />
                 </div>
@@ -176,11 +238,11 @@ export default function PredictionPage({
 
             <div style={fieldGroup}>
               {[
-                ["Total_Purchases", "Total Pembelian"],
-                ["Average_Order_Value", "Nilai Order Rata-rata"],
-                ["Wishlist_Items", "Jumlah Wishlist"],
-                ["Cart_Abandonment_Rate", "Cart Abandonment (%)"],
-                ["Days_Since_Last_Purchase", "Hari Sejak Pembelian Terakhir"]
+                ["Total_Purchases","Total Transaksi"],
+                ["Average_Order_Value","Rata-rata Nilai Belanja"],
+                ["Wishlist_Items","Produk dalam Wishlist"],
+                ["Cart_Abandonment_Rate","Keranjang Tidak Diselesaikan (%)"],
+                ["Days_Since_Last_Purchase","Hari Sejak Transaksi Terakhir"]
               ].map(([key, label]) => (
                 <div key={key}>
                   <label style={labelStyle}>{label}</label>
@@ -188,6 +250,7 @@ export default function PredictionPage({
                     type="number"
                     value={formData[key]}
                     onChange={(e) => set(key, e.target.value)}
+                    placeholder={placeholders[key]}
                     style={inputStyle}
                   />
                 </div>
@@ -198,20 +261,20 @@ export default function PredictionPage({
           {/* LOYALITAS */}
           <GlassCard isMobile={isMobile} themeColors={themeColors}>
             <h3 style={{ color: "#60a5fa", marginBottom: 16 }}>
-              💰 Loyalitas & Nilai Pelanggan
+              ⭐ Loyalitas dan Interaksi Pelanggan
             </h3>
 
             <div style={fieldGroup}>
               {[
-                ["Lifetime_Value", "Lifetime Value"],
-                ["Credit_Balance", "Saldo Kredit"],
-                ["Discount_Usage_Rate", "Penggunaan Diskon (%)"],
-                ["Returns_Rate", "Tingkat Retur (%)"],
-                ["Email_Open_Rate", "Email Open Rate (%)"],
-                ["Customer_Service_Calls", "Panggilan Customer Service"],
-                ["Product_Reviews_Written", "Review Produk"],
-                ["Social_Media_Engagement_Score", "Engagement Sosial"],
-                ["Payment_Method_Diversity", "Variasi Metode Pembayaran"]
+                ["Lifetime_Value","Total Nilai Pelanggan"],
+                ["Credit_Balance","Saldo Kredit"],
+                ["Discount_Usage_Rate","Penggunaan Voucher/Diskon (%)"],
+                ["Returns_Rate","Persentase Pengembalian Barang"],
+                ["Email_Open_Rate","Email yang Dibuka (%)"],
+                ["Customer_Service_Calls","Jumlah Keluhan ke Customer Service"],
+                ["Product_Reviews_Written","Jumlah Review yang Diberikan"],
+                ["Social_Media_Engagement_Score","Aktivitas di Media Sosial"],
+                ["Payment_Method_Diversity","Jumlah Metode Pembayaran yang Digunakan"]
               ].map(([key, label]) => (
                 <div key={key}>
                   <label style={labelStyle}>{label}</label>
@@ -219,6 +282,7 @@ export default function PredictionPage({
                     type="number"
                     value={formData[key]}
                     onChange={(e) => set(key, e.target.value)}
+                    placeholder={placeholders[key]}
                     style={inputStyle}
                   />
                 </div>
@@ -252,7 +316,7 @@ export default function PredictionPage({
               </>
             ) : (
               <>
-                <Cpu size={18} /> Prediksi Risiko Churn
+                <Cpu size={18} /> Prediksi Risiko Pelanggan
               </>
             )}
           </button>
@@ -327,7 +391,7 @@ export default function PredictionPage({
                         fontSize: 12
                       }}
                     >
-                      Risiko Churn
+                      Kemungkinan Berhenti Berlangganan
                     </div>
                   </div>
                 </div>
@@ -353,7 +417,7 @@ export default function PredictionPage({
                       marginBottom: 8
                     }}
                   >
-                    <span>Skor Risiko</span>
+                    <span>Tingkat Risiko</span>
                     <span>{result.probability}%</span>
                   </div>
 
@@ -383,6 +447,35 @@ export default function PredictionPage({
                 >
                   {result.cause}
                 </p>
+
+                <div
+                  style={{
+                    marginTop: 20,
+                    padding: 16,
+                    borderRadius: 12,
+                    background: "rgba(59,130,246,0.08)",
+                    border: "1px solid rgba(59,130,246,0.2)"
+                  }}
+                >
+                  <h4
+                    style={{
+                      color: "#60a5fa",
+                      marginBottom: 8
+                    }}
+                  >
+                    Rekomendasi Tindakan
+                  </h4>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      color: themeColors.textSecondary,
+                      lineHeight: 1.6
+                    }}
+                  >
+                    {result.recommendation}
+                  </p>
+                </div>
               </div>
             </GlassCard>
 

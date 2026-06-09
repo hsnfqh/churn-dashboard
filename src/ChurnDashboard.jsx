@@ -23,31 +23,37 @@ export default function ChurnDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [formData, setFormData] = useState({
-    Age: 25,
-    Membership_Years: 1,
-    Login_Frequency: 10,
-    Session_Duration_Avg: 30,
-    Pages_Per_Session: 5,
-    Cart_Abandonment_Rate: 0,
-    Wishlist_Items: 0,
-    Total_Purchases: 1,
-    Average_Order_Value: 100,
-    Days_Since_Last_Purchase: 10,
-    Discount_Usage_Rate: 0,
-    Returns_Rate: 0,
-    Email_Open_Rate: 50,
-    Customer_Service_Calls: 0,
-    Product_Reviews_Written: 0,
-    Social_Media_Engagement_Score: 50,
-    Mobile_App_Usage: 50,
-    Payment_Method_Diversity: 1,
-    Lifetime_Value: 1000,
-    Credit_Balance: 0,
+    Customer_Name: "",
 
-    Gender: "male",
-    Country: "usa",
-    City: "new york",
-    Signup_Quarter: "q2"
+    Age: "",
+
+    Gender: "Male",
+
+    Country: "",
+    City: "",
+    Signup_Quarter: "Q1",
+
+    Membership_Years: "",
+    Login_Frequency: "",
+    Session_Duration_Avg: "",
+    Pages_Per_Session: "",
+    Mobile_App_Usage: "",
+
+    Total_Purchases: "",
+    Average_Order_Value: "",
+    Wishlist_Items: "",
+    Cart_Abandonment_Rate: "",
+    Days_Since_Last_Purchase: "",
+
+    Lifetime_Value: "",
+    Credit_Balance: "",
+    Discount_Usage_Rate: "",
+    Returns_Rate: "",
+    Email_Open_Rate: "",
+    Customer_Service_Calls: "",
+    Product_Reviews_Written: "",
+    Social_Media_Engagement_Score: "",
+    Payment_Method_Diversity: ""
   });
   const [pageTransition, setPageTransition] = useState(false);
 
@@ -120,18 +126,14 @@ export default function ChurnDashboard() {
         }
       );
 
-      const data = await response.json();
+    const data = await response.json();
 
-      setPredictionResult({
-        probability: data.probability,
-        level: data.risk_level,
-        cause:
-        data.risk_level === "HIGH RISK"
-          ? "Pelanggan menunjukkan indikasi kuat akan berhenti menggunakan layanan."
-          : data.risk_level === "MEDIUM RISK"
-          ? "Terdapat beberapa faktor yang meningkatkan risiko churn."
-          : "Pelanggan masih tergolong loyal dengan risiko churn rendah."
-      });
+    setPredictionResult({
+      probability: data.probability,
+      level: data.level,
+      cause: data.cause,
+      recommendation: data.recommendation
+    });
 
     } catch (error) {
       console.error(error);

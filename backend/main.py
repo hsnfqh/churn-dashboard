@@ -32,6 +32,12 @@ scaler = joblib.load("model/scaler.joblib")
 feature_columns = joblib.load("model/feature_columns.joblib")
 
 # =========================
+# TEMP STORAGE
+# =========================
+
+predicted_customers = []
+
+# =========================
 # INPUT SCHEMA
 # =========================
 
@@ -76,6 +82,15 @@ def root():
 
 
 # =========================
+# GET ALL PREDICTED CUSTOMERS
+# =========================
+
+@app.get("/customers")
+def get_customers():
+    return predicted_customers
+
+
+# =========================
 # PREDICT ENDPOINT
 # =========================
 
@@ -84,38 +99,124 @@ def predict(data: PredictionInput):
 
     input_data = data.dict()
 
-    # dataframe dari input user
+    # =========================
+    # PREPROCESS
+    # =========================
+
     df = pd.DataFrame([input_data])
 
-    # one hot encoding
     df_encoded = pd.get_dummies(df)
 
-    # samakan kolom dengan training
     df_encoded = df_encoded.reindex(
         columns=feature_columns,
         fill_value=0
     )
 
-    # scaling
     scaled_data = scaler.transform(df_encoded)
 
-    # prediksi probabilitas churn
+    # =========================
+    # PREDICTION
+    # =========================
+
     probability = float(
         model.predict_proba(scaled_data)[0][1]
     )
 
     prediction = int(probability >= 0.5)
 
-    # risk level
+    probability_percent = round(
+        probability * 100,
+        2
+    )
+
+    # =========================
+    # RISK LEVEL
+    # =========================
+
     if probability >= 0.70:
         risk_level = "HIGH RISK"
+
     elif probability >= 0.40:
         risk_level = "MEDIUM RISK"
+
     else:
         risk_level = "LOW RISK"
 
-    return {
+    # =========================
+    # CAUSE ANALYSIS
+    # =========================
+
+    causes = []
+
+    if data.Login_Frequency < 10:
+        causes.append("Frekuensi login rendah")
+
+    if data.Session_Duration_Avg < 25:
+        causes.append("Durasi sesi pendek")
+
+    if data.Customer_Service_Calls > 5:
+        causes.append("Panggilan customer service tinggi")
+
+    if data.Days_Since_Last_Purchase > 30:
+        causes.append("Sudah lama tidak melakukan pembelian")
+
+    if data.Cart_Abandonment_Rate > 50:
+        causes.append("Tingkat cart abandonment tinggi")
+
+    if data.Lifetime_Value < 1000:
+        causes.append("Lifetime value rendah")
+
+    if len(causes) == 0:
+        cause = (
+            "Tidak ditemukan faktor risiko dominan. "
+            "Pelanggan menunjukkan perilaku yang relatif stabil."
+        )
+    else:
+        cause = ", ".join(causes)
+
+    # =========================
+    # RECOMMENDATION
+    # =========================
+
+    if probability >= 0.70:
+
+        recommendation = (
+            "Prioritaskan pelanggan ini untuk program retensi. "
+            "Berikan promosi personal, loyalty reward, dan "
+            "follow-up aktif dari tim customer success."
+        )
+
+    elif probability >= 0.40:
+
+        recommendation = (
+            "Tingkatkan engagement pelanggan melalui email marketing, "
+            "voucher diskon, dan rekomendasi produk yang relevan."
+        )
+
+    else:
+
+        recommendation = (
+            "Pelanggan berada pada risiko churn yang rendah. "
+            "Pertahankan kualitas layanan dan lakukan monitoring berkala."
+        )
+
+    # =========================
+    # SAVE CUSTOMER RESULT
+    # =========================
+
+    customer_result = {
+        **input_data,
         "prediction": prediction,
-        "probability": round(probability * 100, 2),
-        "risk_level": risk_level
+        "probability": probability_percent,
+        "level": risk_level,
+        "cause": cause,
+        "recommendation": recommendation
     }
+
+    predicted_customers.append(customer_result)
+
+    # =========================
+    # RESPONSE
+    # =========================
+
+    return customer_result
